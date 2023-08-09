@@ -1,0 +1,3 @@
+- [ ] totp setup prozess implementieren
+- [ ] totp request nach login implementieren
+- [ ] placeholder task (überweisung)

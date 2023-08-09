@@ -6,5 +6,12 @@ class SessionStateKey:
         _prefix = "common" + "-"
         user = _prefix + "user"
         logged_in = _prefix + "logged_in"
-        page = _prefix + "page"
-        window_size = _prefix + "window_size"
+
+    class Banking:
+        _prefix = "banking" + "-"
+        recipient = _prefix + "recipient"
+        reference = _prefix + "reference"
+        value = _prefix + "value"
+        confirm = _prefix + "confirm"
+        cancel = _prefix + "cancel"
+

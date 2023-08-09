@@ -1,3 +1,7 @@
 /venv
 /volume
 /**/__pycache__
+
+# Credentials, they will never be exposed to remote
+user_info.csv
+gmail_pw.txt

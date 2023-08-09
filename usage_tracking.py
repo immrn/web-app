@@ -211,6 +211,15 @@ class cb:
         :param remark: a short annotation
         """
         return _track_(action="switched_page", key=key, remark=remark)
+    
+    def edit_text(key: str, remark: str = None):
+        """
+        Use this func as callback only. Track when a user changed the value of an text_input widget.
+        The widget is identified by its key.
+        :param key: the name of the key of this widget
+        :param remark: a short annotation
+        """
+        return _track_(action="edited_text", key=key, remark=remark)
 
 
 def login(remark: str = None):
