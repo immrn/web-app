@@ -1,8 +1,8 @@
 import streamlit as st
-import banking
 
 st.set_page_config(page_title="Nutzerstudie TOTP Authentication", page_icon="🎓️")
 
+import banking
 import user_management as um
 import config
 import state

@@ -6,8 +6,11 @@ class SessionStateKey:
         _prefix = "common" + "-"
         user_id = _prefix + "user_id"
         state = _prefix + "state"
-        show_pw_warning = _prefix + "show_pw_warning"
-        pw_before = _prefix + "pw_before"
+
+        # Used by login:
+        ret_check_login = _prefix + "ret_check_login"
+        changed_pw = _prefix + "changed_pw"
+        changed_username_or_email = _prefix + "changed_username_or_email"
 
     class Banking:
         _prefix = "banking" + "-"
