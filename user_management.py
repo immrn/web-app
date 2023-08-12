@@ -1,26 +1,32 @@
-import streamlit as st
+
 import os
-from enum import Enum
 import time
-from tweaker import st_tweaker
 import hashlib
-import pandas as pd
-from typing import Literal
 import re
 import uuid
 import smtplib, ssl
-from email.mime.text import MIMEText
+import math
+import pyotp
+import qrcode
 import datetime as dt
+import pandas as pd
+import streamlit as st
+from enum import Enum
+from email.mime.text import MIMEText
+from typing import Literal
+from tweaker import st_tweaker
 
-from constants import SessionStateKey
 import state
 import config
+import usage_tracking as track
+from constants import SessionStateKey
 
 # TODO:
 # We could use cookies to keep an user logged in at multiple tabs. https://github.com/Mohamed-512/Extra-Streamlit-Components#cookie-manager
 # Also we could use the Router feature to use real URL paths instead of query params: https://github.com/Mohamed-512/Extra-Streamlit-Components#router
 
 # Editable constants:
+NAME_OF_APP = "TOTP-Userstudy"  # will appear in the uri if you generate TOTPs
 URL_BASE = config.URL_BASE  # base link of your web app
 PATH_TO_USER_DB_CSV = "user_info.csv"  # where you store your users authentication information
 SMTP_SERVER = config.SMTP_SERVER  # smtp server of sender email adress
@@ -31,12 +37,14 @@ SENDER_EMAIL_PW_FILE = "gmail_pw.txt"  # file containing the password of sender 
 REGISTRATION_TIMEOUT = dt.timedelta(minutes=30)
 REGISTRATION_TIMEOUT_STRING = "30 Minuten"   # timeout as string for the email
 INVALID_USERNAME_SYMBOLS = ["@"]  # keep the "@" in this list!
+FORCE_TOTP_SETUP = True  # if True users have to setup totp once after logging in
 
 
 # Constants: do not change!
 Key = SessionStateKey.Common
 FLUSH = "flush"
 TOTP = "totp"
+SETUP_TOTP = "setup_totp"
 REGISTRATION = "registration"
 RESET_PW = "reset_pw"
 REGISTRATION_MAIL_SENT = "registration_mail_sent"
@@ -46,6 +54,8 @@ LOGGED_IN = "logged_in"
 class Users:
     csv_path = PATH_TO_USER_DB_CSV
     sender_email_pw_file = SENDER_EMAIL_PW_FILE
+    email_bg_color = config.COLOR_BACKGROUND
+    email_primary_color = config.COLOR_PRIMARY
 
     class Col:
         id = "id"
@@ -90,7 +100,7 @@ class Users:
             return False
 
     @staticmethod
-    def register_new(name: str, email: str, pw: str) -> str:
+    def register_user(name: str, email: str, pw: str) -> str:
         """!
         Add a new user to your database. User's ID and other properties will be set automatically.
         A parameter (or you better say its value) is unique, when there is no user which stores the value already.
@@ -112,7 +122,7 @@ class Users:
 
         reg_uuid = str(uuid.uuid4())
         salt = os.urandom(16).hex()
-        secret = "TODO"
+        secret = "-"
         df = Users.df()
         df = df.sort_index()
         highest_id = -1 if df.empty else df.index[-1]
@@ -146,12 +156,56 @@ class Users:
         ).hex()
     
     @staticmethod
-    def setup_totp():
-        # TODO
-        pass
+    def generate_totp_secret_uri(user_id: int) -> (str, str):
+        """!
+        Returns the otpauth uri which you can use too show a QR-Code to setup TOTP.
+        The secret (base32) will be returned too.
+        Returns Tuple(False, Flase) if the user already has setup a secret.
+        @return: Tuple(uri: str, secret: str), both False if user owns a secret
+        """
+        user = Users.get_user_by("id", user_id)
+        email = user[Users.Col.email]
+        if user[Users.Col.secret] != "-":
+            # user already owns a secret
+            return False, False
+        secret = pyotp.random_base32()
+        # https://github.com/google/google-authenticator/wiki/Key-Uri-Format
+        uri = f"otpauth://totp/{NAME_OF_APP}:{email}?" + \
+            f"secret={secret}&" + \
+            f"issuer={NAME_OF_APP}&" + \
+            f"algorithm=SHA1&" + \
+            f"digits=6&" + \
+            f"period=30"
+
+        print(uri)
+        return uri, secret
 
     @staticmethod
-    def df():
+    def set_totp_secret_of_user(user_id: int, secret: str):
+        df = Users.df()
+        df.at[user_id, Users.Col.secret] = secret
+        df.to_csv(Users.csv_path)
+
+    @staticmethod
+    def check_totp(user_id: int, totp: str, secret=None) -> bool:
+        """!
+        Check if totp is valid for the current time step and one time step in the past as well as one step in the future.
+        @param totp: the totp input by user
+        @param secret: only use at totp setup, because at this time user owns no secret
+        @return: True if the totp is vaild
+        """
+        # https://github.com/pyauth/pyotp
+        if not secret:
+            secret = Users.get_user_by("id", user_id)[Users.Col.secret]
+        hotp = pyotp.HOTP(secret)
+        time_counter = math.floor(time.time() / 30)  # unix time
+        valid_totp_list = [hotp.at(time_counter - 1), hotp.at(time_counter), hotp.at(time_counter + 1)]
+        if totp in valid_totp_list:
+            return True
+        return False
+
+    @staticmethod
+    def df() -> pd.DataFrame:
         df = pd.read_csv(Users.csv_path, sep=',')
         # int:
         df[Users.Col.id] = df[Users.Col.id].astype(int)
@@ -242,7 +296,6 @@ class Users:
     def send_registration_email(email: str, reg_uuid: str):
         # Design html mails easy with https://tabular.email/demo/blank
         
-        # TODO reg_url must be the real url not localhost
         reg_url = URL_BASE + "?register=" + reg_uuid
 
         with open("registration_mail.html") as file:
@@ -250,6 +303,8 @@ class Users:
         
         username = Users.get_user_by("email", email)[Users.Col.name]
 
+        html = html.replace("{_primary_color_}", config.email_primary_color)
+        html = html.replace("{_background_color_}", Users.email_bg_color)
         html = html.replace("{username}", username)
         html = html.replace("{registration_timeout}", REGISTRATION_TIMEOUT_STRING)
         html = html.replace("{reg_url}", reg_url)
@@ -360,16 +415,6 @@ def pad_after_title():
     pad(2)
 
 
-def flush_view():
-    st.session_state[Key.state] = LOGGED_IN
-    # We need those st.writes and the sleep to get the screen empty.
-    # Otherwise, we will see the login screen while loading the first view:
-    for i in range(25):
-        st.write("")
-    time.sleep(0.1)
-    st.experimental_rerun()
-
-
 def login_view():
     # TODO block IP address after n failed login attempts for m hours.
     pad_top()
@@ -425,10 +470,19 @@ def login_view():
         
         if new_ret_check_login == Users.RetCheckLogin.valid:
             property = "email" if "@" in username_or_email else "name"
-            user_id = Users.get_user_by(property, username_or_email)[Users.Col.id]
-            st.session_state[Key.state] = FLUSH
-            st.session_state[Key.user_id] = user_id
-            time.sleep(0.1)  # needed to avoid multiple reruns of the flush view
+            user = Users.get_user_by(property, username_or_email)
+
+            if FORCE_TOTP_SETUP and user[Users.Col.secret] == "-":
+                st.session_state[Key.state] = SETUP_TOTP
+            elif user[Users.Col.secret] != "-":
+                st.session_state[Key.state] = TOTP
+            else:
+                st.session_state[Key.state] = LOGGED_IN
+            
+            st.session_state[Key.user_id] = user[Users.Col.id]
+            if state.value(Key.state) == LOGGED_IN:
+                track.login()
+            
             st.experimental_rerun()
         else:
             st.session_state[Key.changed_pw] = False
@@ -439,26 +493,87 @@ def login_view():
     st.session_state[Key.changed_username_or_email] = False
     exit(0)
 
-# TODO implementieren
+
 def totp_view():
     pad_top()
     st.title("Anmelden")
     pad_after_title()
 
-    totp = st_tweaker.text_input(
+    totp_input = st_tweaker.text_input(
         label="Token",
-        help="Dieses Token wird alle 30 Sekunden von einem Gerät generiert.",
+        help="Dieses Token / Einmalpasswort wird alle 30 Sekunden von einem Smartphone generiert.",
         id="totp"
     )
 
-    if totp:
-        user=st.session_state[Key.user]
-        # TODO: Check totp here
+    if totp_input:
+        if Users.check_totp(
+                user_id=state.value(Key.user_id),
+                totp=totp_input):
+            track.login()
+            st.session_state[Key.state] = LOGGED_IN
+            st.experimental_rerun()
+        else:
+            st.warning("TOTP ungültig")
 
+    exit(0)
+
+
+def setup_totp_view():
+    st.title("Einrichten der Zwei-Faktor-Authentisierung", anchor=False)
+    pad_after_title()
+
+    cols = st.columns(2)
+
+    user_id = state.value(Key.user_id)
+    uri, secret = Users.generate_totp_secret_uri(user_id)
+
+    if not uri:
+        st.write("Du hast die Einrichtung der Zwei-Faktor-Authentisierung bereits durchgeführt.")
+        exit(0)
+
+    # Step 1: scan qr code
+    cols[0].header("1. QR-Code scannen")
+    cols[0].write("Scanne folgenden Code mit deinem Smartphone. Wahrscheinlich benötigst Du eine One-time Password (OTP) App.")
+    # TODO eigene TOTP App hier verlinken, wenn im Android store?
+
+    qr = qrcode.QRCode(
+        version=1,
+        box_size=10,
+        border=4,
+        error_correction=qrcode.constants.ERROR_CORRECT_H)
+    qr.add_data(uri)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color=config.COLOR_SECONDARY)
+
+    file_name = f"tmp_qr_code_{str(uuid.uuid4())}.png"
+    img.save(file_name)
+    cols[1].image(file_name, use_column_width=True)
+    os.remove(file_name)
+
+    # Step 2: check totp
+    cols = st.columns(2)
+    cols[0].write("")
+    cols[0].header("2. Prüfen")
+    cols[0].write("Gib das TOTP an, welches die App generiert hat.")
+
+    cols[1].write("")
+    cols[1].write("")
+    cols[1].write("")
+    totp_input = cols[1].text_input(label="TOTP (6-stellige Zahl)")
+
+    if totp_input:
+        if Users.check_totp(
+                user_id=user_id,
+                totp=totp_input,
+                secret=secret):
+            Users.set_totp_secret_of_user(user_id, secret)
+        else:
+            cols[1].warning("TOTP ungültig")
     
     exit(0)
 
-# TODO testen:
+
+# TODO NEXT testen:
 def reset_pw_view():
     pad_top()
     st.title("Passwort zurücksetzen")
@@ -472,7 +587,6 @@ def reset_pw_view():
     )
 
     if username_or_email != "":
-        # TODO Check if username, email exists
         if "@" in username_or_email:
             if Users.isEmailAvailable(username_or_email):
                 st.warning("Es existiert kein Benutzer mit dieser Email.")
@@ -512,7 +626,6 @@ def registration_view():
             st.warning("Diese Email ist bereits vergeben.")
             allow_register = False
     
-    # TODO restrict the valid symbols for a username (we don't want any cryptic stuff).
     username = st.text_input(label="Benutzername")
     if username != "":
         if not Users.isNameAvailable(username):
@@ -538,7 +651,7 @@ def registration_view():
             exit(0)
 
         with st.spinner('Daten werden verarbeitet ...'):
-            reg_uuid = Users.register_new(name=username, email=email, pw=pw)
+            reg_uuid = Users.register_user(name=username, email=email, pw=pw)
             ret, raised_error = Users.send_registration_email(email, reg_uuid=reg_uuid)
             if ret != {} or raised_error:
                 # TODO better error handling and user anweisungen

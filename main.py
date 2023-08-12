@@ -37,9 +37,8 @@ if not state.value(Key.state): # User is not logged in:
     um.login_view()
 elif state.value(Key.state) == um.TOTP:
     um.totp_view()
-elif state.value(Key.state) == um.FLUSH:
-    track.login()
-    um.flush_view()
+elif state.value(Key.state) == um.SETUP_TOTP:
+    um.setup_totp_view()
 elif state.value(Key.state) == um.REGISTRATION_MAIL_SENT:
     um.registration_mail_sent_view(user_id=state.value(Key.user_id))
 

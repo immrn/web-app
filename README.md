@@ -12,6 +12,8 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
+On Windows `./venv/bin` should be `./venv/Scripts` 
+
 ```bash
 streamlit run main.py
 ```

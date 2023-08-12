@@ -4,10 +4,15 @@ SENDER_EMAIL_ADDRESS = "user.study.totp.authentication@gmail.com"
 SMTP_SERVER = "smtp.gmail.com"
 URL_BASE = "http://localhost:8501/"
 
+COLOR_PRIMARY = "#FF4B4B"
+COLOR_SECONDARY = "#FAFAFA"
+COLOR_BACKGROUND = "#0E1117"
+COLOR_SECONDARY_BACKGROUND = "#262730"
+
 # -------------------- Streamlit stuff -------------------- #
 
 # Should the user see the hamburger menu in the top right corner:
-HIDE_TOP_RIGHT_HAMBURGER_MENU = getenv_bool('_HIDE_TOP_RIGHT_HAMBURGER_MENU_', True)
+HIDE_TOP_RIGHT_HAMBURGER_MENU = getenv_bool('_HIDE_TOP_RIGHT_HAMBURGER_MENU_', False)
 
 footer=f"""
     <style>
