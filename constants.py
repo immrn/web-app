@@ -4,8 +4,10 @@ class SessionStateKey:
     # Global keys will be initialized at this EOF:
     class Common:
         _prefix = "common" + "-"
-        user = _prefix + "user"
-        logged_in = _prefix + "logged_in"
+        user_id = _prefix + "user_id"
+        state = _prefix + "state"
+        show_pw_warning = _prefix + "show_pw_warning"
+        pw_before = _prefix + "pw_before"
 
     class Banking:
         _prefix = "banking" + "-"

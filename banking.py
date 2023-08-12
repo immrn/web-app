@@ -12,7 +12,7 @@ _REFERENCE_HELP = "Geben Sie einen beliebigen Verwendungszweck an.  \nDies ist k
 _VALUE_HELP = "Geben Sie einen beliebigen Betrag an.  \nDies ist keine echte Überweisung."
 
 
-def draw_screen():
+def transaction_view():
     st.title("Überweisung")
 
     recipient = st.text_input(
@@ -52,11 +52,13 @@ def draw_screen():
     confirm = col[0].button(
         label="Überprüfen",
         key=Key.confirm,
-        type="primary"
+        type="primary",
+        use_container_width=True,
     )
 
     cancel = col[1].button(
         label="Abbrechen",
         key=Key.cancel,
-        type="secondary"
+        type="secondary",
+        use_container_width=True,
     )
