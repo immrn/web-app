@@ -12,7 +12,7 @@ COLOR_SECONDARY_BACKGROUND = "#262730"
 # -------------------- Streamlit stuff -------------------- #
 
 # Should the user see the hamburger menu in the top right corner:
-HIDE_TOP_RIGHT_HAMBURGER_MENU = getenv_bool('_HIDE_TOP_RIGHT_HAMBURGER_MENU_', False)
+HIDE_TOP_RIGHT_HAMBURGER_MENU = getenv_bool('_HIDE_TOP_RIGHT_HAMBURGER_MENU_', True)
 
 footer=f"""
     <style>

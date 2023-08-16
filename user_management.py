@@ -17,6 +17,7 @@ from typing import Literal
 from tweaker import st_tweaker
 
 import state
+import util
 import config
 import usage_tracking as track
 from constants import SessionStateKey
@@ -36,8 +37,11 @@ SENDER_EMAIL_PW_FILE = "gmail_pw.txt"  # file containing the password of sender 
 # But you should not keep the timeout value too big. Attackers could block emails by walking through registration processes.
 REGISTRATION_TIMEOUT = dt.timedelta(minutes=30)
 REGISTRATION_TIMEOUT_STRING = "30 Minuten"   # timeout as string for the email
+RESET_PW_TIMEOUT = dt.timedelta(minutes=15)
+RESET_PW_TIMEOUT_STRING = "15 Minuten"  # timeout as string for the email
 INVALID_USERNAME_SYMBOLS = ["@"]  # keep the "@" in this list!
 FORCE_TOTP_SETUP = True  # if True users have to setup totp once after logging in
+PW_MIN_LENGTH = 8
 
 
 # Constants: do not change!
@@ -45,9 +49,12 @@ Key = SessionStateKey.Common
 FLUSH = "flush"
 TOTP = "totp"
 SETUP_TOTP = "setup_totp"
+FINISH_TOTP_SETUP = "finish_totp_setup"
 REGISTRATION = "registration"
-RESET_PW = "reset_pw"
 REGISTRATION_MAIL_SENT = "registration_mail_sent"
+RESET_PW = "reset_pw"
+RESET_PW_MAIL_SENT = "reset_pw_mail_sent"
+FINISH_RESET_PW = "finish_reset_pw"
 LOGGED_IN = "logged_in"
 
 
@@ -66,6 +73,8 @@ class Users:
         secret = "secret"
         reg_uuid = "reg_uuid"
         reg_timeout_utc = "reg_timeout_utc"
+        reset_pw_uuid = "reset_pw_uuid"
+        reset_pw_timeout_utc = "reset_pw_timeout_utc"
 
     @staticmethod
     def isNameAvailable(name: str):
@@ -136,7 +145,7 @@ class Users:
             Users.Col.hashed_pw: Users.hash_pw(pw, salt),
             Users.Col.secret: secret,
             Users.Col.reg_uuid: reg_uuid,
-            Users.Col.reg_timeout_utc: timeout
+            Users.Col.reg_timeout_utc: timeout,
         }
         new_user = pd.DataFrame(data=[new_user])
         new_user = new_user.set_index(Users.Col.id)
@@ -147,14 +156,35 @@ class Users:
         return reg_uuid
 
     @staticmethod
-    def hash_pw(pw, salt):
+    def hash_pw(pw: str, salt: str) -> str:
         return hashlib.pbkdf2_hmac(
             hash_name="sha256",
             password=pw.encode('UTF-8'),
             salt=bytes.fromhex(salt),
             iterations=700_000
         ).hex()
-    
+
+    @staticmethod
+    def reset_pw(user_id: int, new_pw: str):
+        salt = os.urandom(16).hex()
+        hashed_pw = Users.hash_pw(new_pw, salt)
+        df = Users.df()
+        df.at[user_id, Users.Col.hashed_pw] = hashed_pw
+        df.at[user_id, Users.Col.salt] = salt
+        df.to_csv(Users.csv_path)
+
+    @staticmethod
+    def set_reset_pw_uuid(user_id: int):
+        reset_pw_uuid = str(uuid.uuid4())
+        timeout = (dt.datetime.utcnow() + RESET_PW_TIMEOUT).replace(microsecond=0)
+
+        df = Users.df()
+        df.at[user_id, Users.Col.reset_pw_uuid] = reset_pw_uuid
+        df.at[user_id, Users.Col.reset_pw_timeout_utc] = timeout
+        df.to_csv(Users.csv_path)
+
+        return reset_pw_uuid
+
     @staticmethod
     def generate_totp_secret_uri(user_id: int) -> (str, str):
         """!
@@ -177,7 +207,6 @@ class Users:
             f"digits=6&" + \
             f"period=30"
 
-        print(uri)
         return uri, secret
 
     @staticmethod
@@ -219,7 +248,7 @@ class Users:
         return df
     
     @staticmethod
-    def get_user_by(property: Literal["id", "name", "email", "reg_uuid"], value) -> dict():
+    def get_user_by(property: Literal["id", "name", "email", "reg_uuid", "reset_pw_uuid"], value) -> dict():
         """!
         Returns a single user. All possible properties are unique properties. So only one user exists for the value you enter.
         @param property: unique property of a user
@@ -233,13 +262,15 @@ class Users:
             except TypeError:
                 raise TypeError("When parameter 'property' is 'id', value must be an integer!")
             user = df[df.index == value]
-        elif property in ["name", "email", "reg_uuid"]:  # strings
+        elif property in ["name", "email", "reg_uuid", "reset_pw_uuid"]:  # strings
             if property == "name":
                 col = Users.Col.name
             elif property == "email":
                 col = Users.Col.email
             elif property == "reg_uuid":
                 col = Users.Col.reg_uuid
+            elif property == "reset_pw_uuid":
+                col = Users.Col.reset_pw_uuid
             try:
                 value = str(value)
             except TypeError:
@@ -303,7 +334,7 @@ class Users:
         
         username = Users.get_user_by("email", email)[Users.Col.name]
 
-        html = html.replace("{_primary_color_}", config.email_primary_color)
+        html = html.replace("{_primary_color_}", Users.email_primary_color)
         html = html.replace("{_background_color_}", Users.email_bg_color)
         html = html.replace("{username}", username)
         html = html.replace("{registration_timeout}", REGISTRATION_TIMEOUT_STRING)
@@ -324,37 +355,76 @@ class Users:
             html=html)
 
     @staticmethod
-    def send_reset_pw_email(email: str):
+    def send_reset_pw_email(email: str, reset_pw_uuid: str):
+        # TODO NEXT UI bauen und dann testen
         # Design html mails easy with https://tabular.email/demo/blank
-        pw_reset_uuid = str(uuid.uuid4())
+        reset_pw_url = URL_BASE + "?reset_pw=" + reset_pw_uuid
+
+        with open("reset_pw_mail.html") as file:
+            html = file.read()
+
+        username = Users.get_user_by("email", email)[Users.Col.name]
+
+        html = html.replace("{_primary_color_}", Users.email_primary_color)
+        html = html.replace("{_background_color_}", Users.email_bg_color)
+        html = html.replace("{username}", username)
+        html = html.replace("{reset_pw_timeout}", RESET_PW_TIMEOUT_STRING)
+        html = html.replace("{reset_pw_url}", reset_pw_url)
+        html = html.replace("{mailto_block_mail}",
+        	"mail_to:user.study.totp.authentication@gmail.com" + \
+            "&amp;" + \
+            "?subject=Ich%20erhalte%20vermehrt%20Zurücksetzungsmails" + \
+            "?body=Ich%20erhalte%20mehrfach%20Emails,%20die%20behaupten%20ich%20wöllte%20mein%20Passwort%20ändern,%20" + \
+                "obwohl%20ich%20dies%20nicht%20beantragt%20habe.<br>" + \
+                "Mit%20dieser%20Mail%20beantrage%20ich,%20keine%20weiteren%20Emails%20diesbezüglich%20" + \
+                "%20zu%20erhalten!"
+        )
+
         # mailto:name@bla.de?subject=Das ist ein Betreff
         subject="Passwort zurücksetzen - Nutzerstudie zur TOTP Authentication"
-        message = ""
         return Users._send_email_(
             email=email,
             subject=subject,
-            message=message)
+            html=html)
 
     @staticmethod
-    def finish_registration(reg_uuid: str) -> bool:
+    def check_expiration_of_uuid(property: Literal["reg_uuid", "reset_pw_uuid"] ,uuid: str) -> bool:
         """!
-        Checks if the registration link did expire. Sets the reg_uuid in the database to "".
-        @param reg_uuid: UUID set for a user to complete their registration
-        @return: False if the registration link expired or there was no or more than a single matching reg_uuid in the table of users. This should never happen.
+        Checks if the registration or reset_pw link did expire. If not expired, sets the reg_uuid or reset_pw_uuid in the database to "-" (means user did register/reset pw).
+        @param property: "reg_uuid" or "reset_pw_uuid"
+        @param uuid: UUID set for a user to complete their registration or reset passwort
+        @return: False if the registration / reset pw link expired or there was no or more than a single matching reg_uuid / reset_pw_uuid in the table of users.
+            This should never happen. True if the uuid didn't expire.
         """
+        if property == "reg_uuid":
+            col_uuid = Users.Col.reg_uuid
+            col_timeout = Users.Col.reg_timeout_utc
+        elif property == "reset_pw_uuid":
+            col_uuid = Users.Col.reset_pw_uuid
+            col_timeout = Users.Col.reset_pw_timeout_utc
+        else:
+            raise ValueError(f"Param 'property' = {property} must have the value 'reg_uuid' or 'reset_pw_uuid'.")
+        
         df = Users.df()
-        if reg_uuid == "-" or df[Users.Col.reg_uuid].loc[df[Users.Col.reg_uuid] == reg_uuid].shape[0] != 1:
+        if (property == "reg_uuid" and uuid == "-") or df[col_uuid].loc[df[col_uuid] == uuid].shape[0] != 1:
             return False
         
-        user = Users.get_user_by("reg_uuid", reg_uuid)
+        user = Users.get_user_by(col_uuid, uuid)
         user_id = user[Users.Col.id]
+        print("\n---------\n")
+        print(user)
+        print(user[col_timeout])
 
-        if dt.datetime.utcnow() > user[Users.Col.reg_timeout_utc]:
+        if property == "reg_uuid" and dt.datetime.utcnow() > user[col_timeout]:
             # registration link expired --> delete this user:
             Users.rm_user(user_id)
             return False
         
-        df.at[user_id, Users.Col.reg_uuid] = "-"
+        elif property == "reset_pw_uuid" and dt.datetime.utcnow() > dt.datetime.fromisoformat(user[col_timeout]):
+            df.at[user_id, col_uuid] = "-"
+            return False
+        
+        df.at[user_id, col_uuid] = "-"
 
         df.to_csv(Users.csv_path)
         return True
@@ -429,7 +499,7 @@ def login_view():
         st.session_state[Key.changed_username_or_email] = True
 
     username_or_email = st_tweaker.text_input(
-        label="Benutzername",
+        label="Benutzername oder Email",
         id="username",
         on_change=username_or_email_changed)
     if ret_check_login == Users.RetCheckLogin.missing_username_or_email:
@@ -523,9 +593,17 @@ def setup_totp_view():
     pad_after_title()
 
     cols = st.columns(2)
-
     user_id = state.value(Key.user_id)
-    uri, secret = Users.generate_totp_secret_uri(user_id)
+
+    if Key.curr_totp_uri_and_secret not in st.session_state:
+        uri, secret = Users.generate_totp_secret_uri(user_id)
+        st.session_state[Key.curr_totp_uri_and_secret] = uri, secret
+    else:
+        uri, secret = st.session_state[Key.curr_totp_uri_and_secret]
+    
+    print("uri:", uri)
+    print("secret:", secret)
+    
 
     if not uri:
         st.write("Du hast die Einrichtung der Zwei-Faktor-Authentisierung bereits durchgeführt.")
@@ -567,23 +645,33 @@ def setup_totp_view():
                 totp=totp_input,
                 secret=secret):
             Users.set_totp_secret_of_user(user_id, secret)
+            st.session_state[Key.state] = LOGGED_IN
+            cols[1].success("TOTP bestätigt!")
+            time.sleep(1.5)
+            st.experimental_rerun()
         else:
             cols[1].warning("TOTP ungültig")
+
     
     exit(0)
 
 
-# TODO NEXT testen:
-def reset_pw_view():
+def finish_totp_setup_view():
+    pad_top()
+    st.subheader("Zwei-Faktor-Authentisierung wurde eingerichtet! :white_check_mark:", anchor=False)
+    time.sleep(2)
+    st.session_state[Key.state] = LOGGED_IN
+    st.experimental_rerun()
+
+
+def initiate_reset_pw_view():
     pad_top()
     st.title("Passwort zurücksetzen")
     pad_after_title()
     
     allow_reset = True
-    username_or_email = st_tweaker.text_input(
-        label="Benutzername oder Email",
-        id="reset_pw_username",
-        placeholder="you@example.com"
+    username_or_email = st.text_input(
+        label="Benutzername oder Email"
     )
 
     if username_or_email != "":
@@ -595,17 +683,79 @@ def reset_pw_view():
             if Users.isNameAvailable(username_or_email):
                 st.warning("Dieser Benutzer existiert nicht.")
                 allow_reset = False
+    
     st.write("")
     reset = st.button('Passwort zurücksetzen', use_container_width=True)
 
-    if (reset or username_or_email != "") and allow_reset:
-        email = Users.get_user_by("email", username_or_email) if "@" in username_or_email else Users.get_user_by("name", username_or_email)
-        ret, raised_error = Users.send_reset_pw_email(email)
-        if ret != {} or raised_error:
-            # TODO better error handling and user anweisungen
-            st.error("Beim Senden der Registrierungs-Email ist etwas fehlgeschlagen.")
-        else:
-            st.info(f"Es wurde eine Email an {email} gesendet. Befolge die darin befindlichen Anweisungen. Schau auch im Spam-Ordner nach.")
+    if reset and username_or_email != "" and allow_reset:
+        user = Users.get_user_by("email", username_or_email) if "@" in username_or_email else Users.get_user_by("name", username_or_email)
+        
+        util.center_spinner()
+        with st.spinner(""):
+            reset_pw_uuid = Users.set_reset_pw_uuid(user[Users.Col.id])
+            ret, raised_error = Users.send_reset_pw_email(user[Users.Col.email], reset_pw_uuid=reset_pw_uuid)
+            if ret != {} or raised_error:
+                # TODO better error handling and user anweisungen
+                st.error("Beim Senden der Email zum Zurücksetzen des Passworts ist etwas fehlgeschlagen.")
+                st.stop()
+            else:
+                st.session_state[Key.user_id] = user[Users.Col.id]
+                st.session_state[Key.state] = RESET_PW_MAIL_SENT
+                st.experimental_rerun()
+
+    exit(0)
+
+
+def reset_pw_mail_sent_view(user_id: int):
+    pad_top()
+    
+    pad_after_title()
+    email = Users.get_user_by("id", user_id)[Users.Col.email]
+    st.subheader(f"Es wurde eine Email an {email} gesendet. Befolge die darin befindlichen Anweisungen. Schau auch im Spam-Ordner.", anchor=False)
+    exit(0)
+
+
+def reset_pw_view(reset_pw_uuid: str):
+    pad_top()
+    reset_pw_allowed = Users.check_expiration_of_uuid(property="reset_pw_uuid", uuid=reset_pw_uuid)
+    
+    allow_pw_reset = True
+
+    if reset_pw_allowed:
+        st.title("Passwort zurücksetzen", anchor=False)
+        pad_after_title()
+
+        new_pw = st.text_input(label="Neues Passwort", type="password")
+        if new_pw != "" and len(new_pw) < PW_MIN_LENGTH:
+            st.warning(f"Passwort muss mindestens {PW_MIN_LENGTH} Zeichen enthalten")
+            allow_pw_reset = False
+
+        new_pw_repeated = st.text_input(label="Neues Passwort wiederholen", type="password")
+        if "" not in [new_pw, new_pw_repeated] and new_pw != new_pw_repeated:
+            st.warning("Wiederholtes Passwort muss übereinstimmen")
+            allow_pw_reset = False
+
+        confirm = st.button(label="Bestätigen", use_container_width=True)
+
+        if confirm and allow_pw_reset:
+            user = Users.get_user_by(property="reset_pw_uuid", value=reset_pw_uuid)
+            Users.reset_pw(user_id=user[Users.Col.id], new_pw=new_pw)
+            st.session_state[Key.state] = FINISH_RESET_PW
+    else:
+        st.title("Dieser Link ist leider abgelaufen.")
+        # Offer to repeat registration:
+        st.write(f'Du kannst dein Passwort <a href="/?page={RESET_PW}" target="_self">erneut zurücksetzen</a>.', unsafe_allow_html=True)
+    
+    exit(0)
+
+
+def finish_reset_pw_view():
+    pad_top()
+    
+    st.title("Passwort zurücksetzen", anchor=False)
+    pad_after_title()
+    st.write("Du hast dein Passwort erfolgreich zurückgesetzt.")
+    st.write(f'<a href="/" target="_self">Zur Anmeldung</a>', unsafe_allow_html=True)
 
     exit(0)
 
@@ -629,18 +779,19 @@ def registration_view():
     username = st.text_input(label="Benutzername")
     if username != "":
         if not Users.isNameAvailable(username):
-            st.warning("Dieser Name ist bereits vergeben.")
+            st.warning("Name bereits vergeben")
             allow_register = False
         if not Users.isNameValid(username):
             st.warning(f"Der Name enthält eines der ungültigen Zeichen: {','.join(INVALID_USERNAME_SYMBOLS)}")
             allow_register = False
 
-    # TODO do a dictionary scan to ensure users don't use dictionary
-    # words (e.g. "house") within their passwords.
-    pw = st.text_input(label="Passwort (mindestens 8 Zeichen)", type='password')
+    pw = st.text_input(label="Passwort", placeholder="mindestens 8 Zeichen", type='password')
+    if pw != "" and len(pw) < PW_MIN_LENGTH:
+        st.warning(f"Passwort muss mindestens {PW_MIN_LENGTH} Zeichen enthalten")
+        allow_register = False
     pw_repeated = st.text_input(label="Passwort (wiederholen)", type='password')
     if "" not in [pw_repeated, pw] and pw_repeated != pw:
-            st.warning("Wiederholtes Passwort muss übereinstimmen.")
+            st.warning("Wiederholtes Passwort muss übereinstimmen")
             allow_register = False
 
     register = st.button('Registrieren', use_container_width=True)
@@ -650,7 +801,8 @@ def registration_view():
             st.warning("Füllen Sie jedes Feld aus.")
             exit(0)
 
-        with st.spinner('Daten werden verarbeitet ...'):
+        util.center_spinner()  
+        with st.spinner(""):
             reg_uuid = Users.register_user(name=username, email=email, pw=pw)
             ret, raised_error = Users.send_registration_email(email, reg_uuid=reg_uuid)
             if ret != {} or raised_error:
@@ -667,10 +819,11 @@ def registration_view():
     exit(0)
 
 
-def registration_mail_sent_view(user_id: int):
+def registration_mail_sent_view():
     pad_top()
     st.title("Fast geschafft!:rocket:", anchor=False)
     pad_after_title()
+    user_id = state.value(Key.user_id)
     email = Users.get_user_by("id", user_id)[Users.Col.email]
     st.subheader(f"Dir wurde eine Email an {email} gesendet, um die Registierung abzuschließen. Schau auch im Spam-Ordner nach.", anchor=False)
     exit(0)
@@ -678,15 +831,13 @@ def registration_mail_sent_view(user_id: int):
 
 def finish_registration_view(reg_uuid: str):
     pad_top()
-    registration_finished = Users.finish_registration(reg_uuid=reg_uuid)
+    registration_finished = Users.check_expiration_of_uuid(property="reg_uuid", uuid=reg_uuid)
 
     if registration_finished:
         st.title("Registrierung abgeschlossen", anchor=False)
         pad_after_title()
         st.write("Du hast dich erfolgreich registriert.")
         st.write(f'<a href="/" target="_self">Zur Anmeldung</a>', unsafe_allow_html=True)
-
-        
     else:
         st.title("Dein Link zur Registrierung ist abgelaufen.", anchor=False)
         pad_after_title()

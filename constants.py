@@ -12,6 +12,9 @@ class SessionStateKey:
         changed_pw = _prefix + "changed_pw"
         changed_username_or_email = _prefix + "changed_username_or_email"
 
+        # Used by TOTP Setup:
+        curr_totp_uri_and_secret = _prefix + "curr_totp_uri_and_secret"
+
     class Banking:
         _prefix = "banking" + "-"
         recipient = _prefix + "recipient"
@@ -19,4 +22,4 @@ class SessionStateKey:
         value = _prefix + "value"
         confirm = _prefix + "confirm"
         cancel = _prefix + "cancel"
-
+        state = _prefix + "state"

@@ -1,11 +1,16 @@
 import streamlit as st
-import state
-from constants import SessionStateKey
-import usage_tracking as track
 from streamlit_modal import Modal
 import streamlit.components.v1 as components
+import time
+
+import util
+import state
+import usage_tracking as track
+from constants import SessionStateKey
 
 Key = SessionStateKey.Banking
+
+TRANSACTION_SUCCESS = "transaction_success"
 
 _RECIPIENT_HELP = "Geben Sie eine beliebige IBAN an.  \nDies ist keine echte Überweisung."
 _REFERENCE_HELP = "Geben Sie einen beliebigen Verwendungszweck an.  \nDies ist keine echte Überweisung."
@@ -13,8 +18,10 @@ _VALUE_HELP = "Geben Sie einen beliebigen Betrag an.  \nDies ist keine echte Üb
 
 
 def transaction_view():
-    st.title("Überweisung")
-
+    cols = st.columns(2)
+    cols[0].title("Überweisung", anchor=False)
+    cols[1].write(f'<br><div style="text-align: right"> <i> Dies ist keine echte Überweisung. </i></div>', unsafe_allow_html=True)
+    
     recipient = st.text_input(
         label="Empfänger",
         key=Key.recipient, 
@@ -32,7 +39,7 @@ def transaction_view():
         help=_REFERENCE_HELP,
         on_change=track.cb.edit_text,
         kwargs={"key": Key.reference},
-        placeholder="Nachricht an der Empfänger"
+        placeholder="Nachricht an Empfänger"
     )
 
     value = st.number_input(
@@ -62,3 +69,17 @@ def transaction_view():
         type="secondary",
         use_container_width=True,
     )
+
+    if confirm:
+        util.center_spinner()
+        with st.spinner(""):
+            time.sleep(2)
+        st.session_state[Key.state] = TRANSACTION_SUCCESS
+    if cancel:
+        st.info("Überweisung abgebrochen")
+
+def transaction_success_view():
+    st.title("Überweisung", anchor=False)
+    st.write("")
+    st.success("Ihre Überweisung wurde bestätigt.")
+    st.write("Bitte Schließen Sie den Tab und melden Sie sich morgen erneut an.")
