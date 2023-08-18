@@ -15,6 +15,7 @@ from enum import Enum
 from email.mime.text import MIMEText
 from typing import Literal
 from tweaker import st_tweaker
+import streamlit.components.v1 as components
 
 import state
 import util
@@ -491,38 +492,68 @@ def login_view():
     st.title("Anmelden")
     pad_after_title()
 
+    if "focus_id" not in st.session_state:
+        st.session_state.focus_id = 0
+
     ret_check_login = state.value(Key.ret_check_login)
     changed_pw = state.value(Key.changed_pw)
     changed_username_or_email = state.value(Key.changed_username_or_email)
 
     def username_or_email_changed():
         st.session_state[Key.changed_username_or_email] = True
+        if st.session_state.focus_id >= 0:
+            st.session_state.focus_id = 1
 
     username_or_email = st_tweaker.text_input(
         label="Benutzername oder Email",
         id="username",
-        on_change=username_or_email_changed)
+        on_change=username_or_email_changed,
+        autocomplete="username_or_email")
     if ret_check_login == Users.RetCheckLogin.missing_username_or_email:
         st.warning("Benutzername eingeben.")
+        st.session_state.focus_id = 0
     elif ret_check_login == Users.RetCheckLogin.user_not_found:
         st.warning("Dieser Benutzer existiert nicht.")
+        st.session_state.focus_id = 0
     elif ret_check_login == Users.RetCheckLogin.not_fully_registered:
         st.info("Registrierung noch nicht abgeschlossen. Schau in dein Email-Postfach und im Spam.")
 
     def pw_changed():
         st.session_state[Key.changed_pw] = True
+        st.session_state.focus_id = -1
 
     pw = st_tweaker.text_input(
         label="Passwort",
         type='password',
         id="password",
-        on_change=pw_changed)
+        on_change=pw_changed,
+        autocomplete="current-password")
     if ret_check_login == Users.RetCheckLogin.missing_pw:
         st.warning("Passwort eingeben.")
+        st.session_state.focus_id = 1
     elif ret_check_login == Users.RetCheckLogin.invalid_pw:
         cols = st.columns(2)
         cols[0].warning("Passwort ungültig.")
         cols[1].write(f'<div style="text-align: right"> <a href="/?page={RESET_PW}" target="_self">Passwort vergessen?</a> </div><br>', unsafe_allow_html=True)
+        st.session_state.focus_id = 1
+
+    # this part of the code focuses input on username text input and then on password input
+    components.html(
+        f"""
+        <div>some hidden container</div>
+        <p>{st.session_state.focus_id}</p>
+        <script>
+            var input = window.parent.document.querySelectorAll("input[type=text],input[type=password]");
+            // for (var i = 0; i < input.length; ++i) {{
+            //     input[i].focus();
+            // }}
+            if ({st.session_state.focus_id} >= 0) {{
+                input[{st.session_state.focus_id}].focus();
+            }}
+        </script>
+        """,
+        height=0,
+    )
 
     login = st.button('Anmelden', type="secondary", use_container_width=True)
     # Pressing [ENTER] will start a login attempt -> no need to click "login"-button
