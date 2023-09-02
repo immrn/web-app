@@ -504,11 +504,12 @@ def login_view():
         if st.session_state.focus_id >= 0:
             st.session_state.focus_id = 1
 
+    # autocomplete: https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/autocomplete
     username_or_email = st_tweaker.text_input(
         label="Benutzername oder Email",
         id="username",
         on_change=username_or_email_changed,
-        autocomplete="username_or_email")
+        autocomplete="username")
     if ret_check_login == Users.RetCheckLogin.missing_username_or_email:
         st.warning("Benutzername eingeben.")
         st.session_state.focus_id = 0
@@ -555,7 +556,7 @@ def login_view():
         height=0,
     )
 
-    login = st.button('Anmelden', type="secondary", use_container_width=True)
+    login = st_tweaker.button(label='Anmelden', type="secondary", use_container_width=True, id="login")
     # Pressing [ENTER] will start a login attempt -> no need to click "login"-button
     login = True if changed_pw or (changed_username_or_email and pw != "") else login
 
@@ -603,7 +604,8 @@ def totp_view():
     totp_input = st_tweaker.text_input(
         label="Token",
         help="Dieses Token / Einmalpasswort wird alle 30 Sekunden von einem Smartphone generiert.",
-        id="totp"
+        id="totp",
+        autocomplete="one-time-code"
     )
 
     if totp_input:
