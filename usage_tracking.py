@@ -5,6 +5,7 @@ import datetime as dt
 from logging.handlers import RotatingFileHandler
 from typing import Optional
 from streamlit_javascript import st_javascript
+import config
 
 
 # For a later README:
@@ -32,10 +33,7 @@ from streamlit_javascript import st_javascript
 _track_logger_ = None
 _key_for_username_ = None
 _SEP_ = ";"  # seperator for csv file
-_SAVE_FILE_NAME_ = "usage_tracking.csv"
-_SAVE_FILE_DIR_ = "volume/"
-
-_SAVE_FILE_PATH_ = _SAVE_FILE_DIR_ + ("/" if not _SAVE_FILE_DIR_.endswith("/") else "") + _SAVE_FILE_NAME_
+_SAVE_FILE_PATH_ = config.PATH_TO_USAGE_TRACKING_FILE
 
 class CustomFormatter(logging.Formatter):
     """Logging colored formatter, adapted from https://stackoverflow.com/a/56944256/3638629"""

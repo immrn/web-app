@@ -1,13 +1,25 @@
 from config_util import (getenv_bool, getenv_int, getenv_switch_str)
 
+PRODUCTION = getenv_bool("PRODUCTION", False)
+
 SENDER_EMAIL_ADDRESS = "user.study.totp.authentication@gmail.com"
 SMTP_SERVER = "smtp.gmail.com"
 URL_BASE = "http://localhost:8501/"
+NAME_OF_APP = "Simuliertes Banking"
+PATH_TO_USER_DB_CSV = "volume/user_info.csv"
+PATH_TO_EMAIL_PW_FILE = "gmail_pw.txt"
+PATH_TO_USAGE_TRACKING_FILE = "volume/usage_tracking.csv"
 
 COLOR_PRIMARY = "#FF4B4B"
 COLOR_SECONDARY = "#FAFAFA"
 COLOR_BACKGROUND = "#0E1117"
 COLOR_SECONDARY_BACKGROUND = "#262730"
+
+if PRODUCTION:
+    URL_BASE = "https://totp-study.informatik.tu-freiberg.de/"
+    PATH_TO_USER_DB_CSV = "/share/volume/user_info.csv"
+    PATH_TO_EMAIL_PW_FILE = "/share/volume/gmail_pw.txt"
+    PATH_TO_USAGE_TRACKING_FILE = "/share/volume/usage_tracking.csv"
 
 # -------------------- Streamlit stuff -------------------- #
 
@@ -17,6 +29,12 @@ HIDE_TOP_RIGHT_HAMBURGER_MENU = getenv_bool('_HIDE_TOP_RIGHT_HAMBURGER_MENU_', T
 footer=f"""
     <style>
         {"#" if HIDE_TOP_RIGHT_HAMBURGER_MENU else ""}MainMenu {{visibility: hidden;}}
+
+        .reportview-container {{
+            margin-top: -2em;
+        }}
+        .stDeployButton {{display:none;}}
+        #stDecoration {{display:none;}}
 
         a:link , a:visited{{
             color: #2e9aff;

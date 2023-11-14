@@ -1,5 +1,4 @@
 import streamlit as st
-from streamlit_modal import Modal
 import streamlit.components.v1 as components
 import time
 
@@ -43,7 +42,7 @@ def transaction_view():
     )
 
     value = st.number_input(
-        label="Betrag",
+        label="Betrag in €",
         key=Key.value,
         min_value=0.00,
         step=1.00,
@@ -57,7 +56,7 @@ def transaction_view():
     col = st.columns(2)
 
     confirm = col[0].button(
-        label="Überprüfen",
+        label="Überweisen",
         key=Key.confirm,
         type="primary",
         use_container_width=True,
@@ -75,6 +74,7 @@ def transaction_view():
         with st.spinner(""):
             time.sleep(2)
         st.session_state[Key.state] = TRANSACTION_SUCCESS
+        st.experimental_rerun()
     if cancel:
         st.info("Überweisung abgebrochen")
 

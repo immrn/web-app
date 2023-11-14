@@ -1,4 +1,3 @@
-
 import os
 import time
 import hashlib
@@ -28,12 +27,12 @@ from constants import SessionStateKey
 # Also we could use the Router feature to use real URL paths instead of query params: https://github.com/Mohamed-512/Extra-Streamlit-Components#router
 
 # Editable constants:
-NAME_OF_APP = "TOTP-Userstudy"  # will appear in the uri if you generate TOTPs
+NAME_OF_APP = config.NAME_OF_APP  # will appear in the uri if you generate TOTPs
 URL_BASE = config.URL_BASE  # base link of your web app
-PATH_TO_USER_DB_CSV = "user_info.csv"  # where you store your users authentication information
+PATH_TO_USER_DB_CSV = config.PATH_TO_USER_DB_CSV  # where you store your users authentication information
 SMTP_SERVER = config.SMTP_SERVER  # smtp server of sender email adress
 SENDER_EMAIL = config.SENDER_EMAIL_ADDRESS  # from where registration mails will be sent
-SENDER_EMAIL_PW_FILE = "gmail_pw.txt"  # file containing the password of sender email address, gitignore this file!
+PATH_TO_EMAIL_PW_FILE = config.PATH_TO_EMAIL_PW_FILE  # file containing the password of sender email address, gitignore this file!
 # TIMEOUT of registration link after registration process started. Your users should get at least 10 min to click on the link in their registration email.
 # But you should not keep the timeout value too big. Attackers could block emails by walking through registration processes.
 REGISTRATION_TIMEOUT = dt.timedelta(minutes=30)
@@ -59,9 +58,24 @@ FINISH_RESET_PW = "finish_reset_pw"
 LOGGED_IN = "logged_in"
 
 
+def checkFiles():
+    exit_app = False
+    # DB file user_info.csv:
+    if not os.path.exists(Users.csv_path):
+        props = [attr for attr in dir(Users.Col) if not callable(getattr(Users.Col, attr)) and not attr.startswith("__")]
+        f = open(Users.csv_path, "w")
+        f.write(",".join(props))
+        f.close()
+    # gmail pw:
+    if not os.path.exists(PATH_TO_EMAIL_PW_FILE):
+        st.error("gmail_pw.txt file doesn't exist!")
+        exit_app = True
+
+    exit(1) if exit_app else None
+
+
 class Users:
     csv_path = PATH_TO_USER_DB_CSV
-    sender_email_pw_file = SENDER_EMAIL_PW_FILE
     email_bg_color = config.COLOR_BACKGROUND
     email_primary_color = config.COLOR_PRIMARY
 
@@ -301,7 +315,7 @@ class Users:
     @staticmethod
     def _send_email_(email: str, subject: str, html: str):
         port = 465  # SSL
-        with open(Users.sender_email_pw_file) as file:
+        with open(PATH_TO_EMAIL_PW_FILE) as file:
             password = file.readline()
         smtp_server = SMTP_SERVER
         sender_email = SENDER_EMAIL
@@ -488,8 +502,23 @@ def pad_after_title():
 
 def login_view():
     # TODO block IP address after n failed login attempts for m hours.
-    pad_top()
-    st.title("Anmelden")
+    col1, col2 = st.columns([2,9])
+    with col1:
+        st.markdown("""
+        <style>
+        .big-font {
+            font-size:90px !important;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
+        st.markdown('<div class="big-font">🏦</div>', unsafe_allow_html=True)
+    with col2:
+        pad(1)
+        st.title("Simuliertes Banking", False)
+        st.markdown("_Simulierter Banking-Dienst einer Nutzerstudie_")
+    pad(1)
+    st.header("Anmelden", False)
     pad_after_title()
 
     if "focus_id" not in st.session_state:

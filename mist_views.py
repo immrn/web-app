@@ -1,4 +1,5 @@
 import streamlit as st
+from streamlit_javascript import st_javascript
 import config
 
 def not_found_404():
@@ -30,7 +31,7 @@ def about():
         
         Vielen Dank, dass du dich für die Studie interessierst bzw. an ihr teilnimmst!
 
-        Bei Fragen kontaktiere mich per Email: [{config.SENDER_EMAIL_ADDRESS}](mailto:user.study.totp.authentication@gmail.com)
+        Bei Fragen kontaktiere mich per Email: [{config.SENDER_EMAIL_ADDRESS}](mailto:{config.SENDER_EMAIL_ADDRESS})
         """
     )
     exit(0)
@@ -42,7 +43,58 @@ def contact():
         f"""
         Marian Käsemodel  
         Student der TU Bergakademie Freiberg  
-        Email: [{config.SENDER_EMAIL_ADDRESS}](mailto:user.study.totp.authentication@gmail.com)  
+        Email: [{config.SENDER_EMAIL_ADDRESS}](mailto:{config.SENDER_EMAIL_ADDRESS})  
         """
     )
+    exit(0)
+
+
+def download():
+
+    os = st_javascript("""window.navigator.platform;""")
+    st.write(f"OS = {os}")
+    os = st_javascript("""navigator.appVersion.indexOf('Win');""")
+    st.write(f"OS = {'Windows' if os != -1 else 'not Windows'}")
+
+    link_chrome_download = "https://www.google.com/chrome/"
+
+    st.title("Blue TOTP installieren")
+    st.markdown("Diese Anleitung hilft Ihnen, Blue TOTP auf ihrem Windows PC und auf Ihrem Android Smartphone zu installieren.")
+    st.subheader("Voraussetzungen")
+    st.markdown(
+        f"""
+        - bluetoothfähiger Windows PC + [Chrome Browser]({link_chrome_download})
+        - Android Smartphone
+        """    
+    )
+    st.subheader("Installation (Windows)")
+    st.markdown(
+        f"""
+        1. Führen Sie die folgenden Schritte nur auf einem Windows PC aus.
+        2. Installiere die [Blue TOTP Extension](TODO) im Chrome Browser.
+        3. Laden Sie das Programm **_Blue TOTP Service_** herunter und installieren Sie es.
+        """
+    )
+    cols = st.columns([1,35])
+    cols[1].download_button(
+        label="Blue TOTP Service herunterladen",
+        file_name="todo-test-file",
+        data="TODO-testdata",
+    )
+
+    st.subheader("Installation (Android)")
+    st.markdown(
+        f"""
+        Suchen Sie im "Play Store" nach "Blue TOTP" oder scannen Sie den folgenden QR-Code mit ihrem Android-Smartphone:  
+        TODO Play Store Blue TOTP QR Code
+        """
+    )
+
+    st.markdown(
+        f"""
+        <style>
+        footer {{visibility: hidden;}}
+        </style
+        """
+    , unsafe_allow_html=True)
     exit(0)
