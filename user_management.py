@@ -595,11 +595,9 @@ def login_view():
                 st.session_state[Key.state] = TOTP
             else:
                 st.session_state[Key.state] = LOGGED_IN
-            
+
             st.session_state[Key.user_id] = user[Users.Col.id]
-            if state.value(Key.state) == LOGGED_IN:
-                track.login()
-            
+            track.enter_valid_credentials()
             st.rerun()
         else:
             st.session_state[Key.changed_pw] = False
@@ -627,11 +625,12 @@ def totp_view():
         if Users.check_totp(
                 user_id=state.value(Key.user_id),
                 totp=totp_input):
-            track.login()
             st.session_state[Key.state] = LOGGED_IN
+            track.enter_valid_totp()
             st.rerun()
         else:
             st.warning("TOTP ungültig")
+            track.enter_invalid_totp()
 
     exit(0)
 
@@ -647,11 +646,7 @@ def setup_totp_view():
         uri, secret = Users.generate_totp_secret_uri(user_id)
         st.session_state[Key.curr_totp_uri_and_secret] = uri, secret
     else:
-        uri, secret = st.session_state[Key.curr_totp_uri_and_secret]
-    
-    print("uri:", uri)
-    print("secret:", secret)
-    
+        uri, secret = st.session_state[Key.curr_totp_uri_and_secret]    
 
     if not uri:
         st.write("Du hast die Einrichtung der Zwei-Faktor-Authentisierung bereits durchgeführt.")
@@ -694,13 +689,14 @@ def setup_totp_view():
                 secret=secret):
             Users.set_totp_secret_of_user(user_id, secret)
             st.session_state[Key.state] = LOGGED_IN
+            track.finish_totp_setup()
             cols[1].success("TOTP bestätigt!")
             time.sleep(1.5)
             st.rerun()
         else:
             cols[1].warning("TOTP ungültig")
+            track.failed_totp_setup()
 
-    
     exit(0)
 
 

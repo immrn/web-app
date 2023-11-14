@@ -220,12 +220,32 @@ class cb:
         return _track_(action="edited_text", key=key, remark=remark)
 
 
-def login(remark: str = None):
+def enter_valid_credentials(remark: str = None):
     """
     After a user logged in, call this once.
     :param remark: a short annotation
     """
-    return _track_(action="logged_in", remark=remark)
+    return _track_(action="entered_valid_credentials", remark=remark)
+
+
+def enter_invalid_totp(remark: str = None):
+    """
+    After a user entered a invaild TOTP, call this once.
+    :param remark: a short annotation
+    """
+    return _track_(action="entered_invalid_totp", remark=remark)
+
+
+def enter_valid_totp():
+    return _track_(action="entered_valid_totp")
+
+
+def finish_totp_setup():
+    return _track_(action="finished_totp_setup")
+
+
+def failed_totp_setup():
+    return _track_(action="failed_totp_setup")
 
 
 def resize_window(key: str, remark: str = None):

@@ -60,6 +60,8 @@ def transaction_view():
         key=Key.confirm,
         type="primary",
         use_container_width=True,
+        on_click=track.cb.click,
+        kwargs={"key": Key.confirm}
     )
 
     cancel = col[1].button(
