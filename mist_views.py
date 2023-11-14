@@ -12,26 +12,21 @@ def about():
     st.title("Über die Studie", anchor=False)
     st.markdown(
         f"""
-        Dies ist eine Web-Anwendung im Rahmen einer Nutzerstudie an der [TU Bergakademie Freiberg](https://tu-freiberg.de). 
+        Dies ist eine Web-Anwendung im Rahmen einer Nutzerstudie an der [TU Bergakademie Freiberg](https://tu-freiberg.de).  
+        
         Ziel der Studie ist die Analyse eines erweiterten Verfahrens der Zwei-Faktor-Authentisierung. 
-        Das Verfahren nennt sich [Time-based One-time Passwords](https://www.ionos.de/digitalguide/server/sicherheit/totp/) (TOTP), deutsch _zeitbasierte Einmalpasswörter_. 
+        Das erweiterte Verfahren basiert auf dem bereits etablierten Verfahren [Time-based One-time Passwords](https://www.ionos.de/digitalguide/server/sicherheit/totp/) (TOTP), deutsch _zeitbasierte Einmalpasswörter_. 
 
-        Allerdings wurde dieses Verfahren im Rahmen der Studie, wie folgt, erweitert:  
+        Die Erweiterungen umfassen folgende Funktionen:  
         Eine Extension im Chrome-Browser des Nutzers erkennt den Anmeldevorgang und erfragt per Bluetooth das TOTP vom Smartphone des Nutzers. 
         Auf dem Smartphone muss der Anmeldevorgang bestätigt werden, damit das Smartphone das TOTP an die Extension sendet. 
-        Die Extension versucht das TOTP in das entsprechende Eingabefeld einzusetzen und zu bestätigen. 
+        Die Extension versucht das TOTP in das entsprechende Eingabefeld auf der Website einzusetzen und zu bestätigen. 
         Ziel ist es dem Nutzer mehr Usability und Schutz vor Phishing-Websites zu bieten. 
         Denn das normale TOTP-Verfahren bietet keinen Schutz vor Diebstahl der Anmeldedaten auf Phishing-Websites. Das erweiterte Verfahren dagegen stellt sicher, dass ein TOTP nur dann vom Smartphone zur Extension übertragen wird, wenn die aktuelle URL im Browser in der TOTP-App des Smartphones hinterlegt ist.
-
-        Das erweiterte TOTP-Verfahren bietet auch eine sichere, aber weniger nutzerfreundliche Option an, falls eine Bluetooth-Verbindung nicht möglich ist. 
-        Dabei scanned der Nutzer mit der TOTP-App seines Smartphones einen QR-Code ein, den die Extension generiert, sobald das TOTP vom Webservice verlangt wird. 
-        Dieser QR-Code enthält unter anderem die URL der Website. 
-        Die TOTP-App des Smartphones überprüft wieder, ob sie für diese URL ein TOTP erstellen kann und zeigt es dann auf dem Display an. 
-        Nun muss der Nutzer das TOTP nur noch händisch auf der Website eingeben.
         
-        Vielen Dank, dass du dich für die Studie interessierst bzw. an ihr teilnimmst!
+        Vielen Dank, dass Sie sich für die Studie interessieren bzw. an ihr teilnehmen!
 
-        Bei Fragen kontaktiere mich per Email: [{config.SENDER_EMAIL_ADDRESS}](mailto:{config.SENDER_EMAIL_ADDRESS})
+        Bei Fragen kontaktieren Sie mich per Email: [{config.SENDER_EMAIL_ADDRESS}](mailto:{config.SENDER_EMAIL_ADDRESS})
         """
     )
     exit(0)
@@ -55,7 +50,7 @@ def download():
 
     st.title("Blue TOTP installieren")
 
-    st.markdown("Diese Anleitung hilft Ihnen, Blue TOTP auf ihrem Windows PC und auf Ihrem Android Smartphone zu installieren.")
+    st.markdown("Diese Anleitung hilft Ihnen, Blue TOTP auf Ihrem Windows PC und auf Ihrem Android Smartphone zu installieren.")
     st.subheader("Voraussetzungen")
     if not is_windows:
         st.error("Sie befinden sich aktuell nicht auf einem Windows PC. Wechseln Sie auf einen Windows PC und rufen Sie diese Website erneut auf.")
@@ -69,7 +64,7 @@ def download():
     st.markdown(
         f"""
         1. Führen Sie die folgenden Schritte nur auf einem Windows PC aus.
-        2. Installiere die [Blue TOTP Extension](TODO) im Chrome Browser.
+        2. Installieren Sie die [Blue TOTP Extension](TODO) im Chrome Browser.
         3. Laden Sie das Programm **_Blue TOTP Service_** herunter und installieren Sie es.
         """
     )
@@ -83,16 +78,8 @@ def download():
     st.subheader("Installation (Android)")
     st.markdown(
         f"""
-        Suchen Sie im "Play Store" nach "Blue TOTP" oder scannen Sie den folgenden QR-Code mit ihrem Android-Smartphone:  
+        Suchen Sie im **Play Store** nach <q>_Blue TOTP_</q> oder scannen Sie den folgenden QR-Code mit Ihrem Android-Smartphone:  
         TODO Play Store Blue TOTP QR Code
-        """
-    )
-
-    st.markdown(
-        f"""
-        <style>
-        footer {{visibility: hidden;}}
-        </style
-        """
-    , unsafe_allow_html=True)
+        """,
+    unsafe_allow_html=True)
     exit(0)

@@ -23,9 +23,9 @@ Key = SessionStateKey.Common
 state.init()
 track.init(st_key_for_username=Key.user_id)
 um.checkFiles()
-#st.markdown(config.HIDE_STREAMLIT_STYLE, unsafe_allow_html=True)
+st.markdown(config.STREAMLIT_STYLE, unsafe_allow_html=True)
 if not called_download_page:
-    st.markdown(config.footer, unsafe_allow_html=True)
+    st.markdown(config.CUSTOM_FOOTER, unsafe_allow_html=True)
 
 # Login:
 if not state.value(Key.state): # User is not logged in:

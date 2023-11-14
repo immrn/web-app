@@ -83,5 +83,6 @@ def transaction_view():
 def transaction_success_view():
     st.title("Überweisung", anchor=False)
     st.write("")
-    st.success("Ihre Überweisung wurde bestätigt.")
-    st.write("Bitte Schließen Sie den Tab und melden Sie sich morgen erneut an.")
+    st.success("✅ Ihre simulierte Überweisung wurde bestätigt.")
+    st.write("Melden Sie sich **morgen** erneut an und tätigen Sie eine weitere simulierte Überweisung.")
+    st.write("Sie können den Tab jetzt schließen.")

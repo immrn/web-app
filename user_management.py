@@ -532,7 +532,7 @@ def login_view():
         st.warning("Dieser Benutzer existiert nicht.")
         st.session_state.focus_id = 0
     elif ret_check_login == Users.RetCheckLogin.not_fully_registered:
-        st.info("Registrierung noch nicht abgeschlossen. Schauen Sie in ihr Email-Postfach und im Spam.")
+        st.info("Registrierung noch nicht abgeschlossen. Schauen Sie in Ihr Email-Postfach und im Spam.")
 
     def pw_changed():
         st.session_state[Key.changed_pw] = True
@@ -654,7 +654,7 @@ def setup_totp_view():
 
     # Step 1: scan qr code
     cols[0].header("1. QR-Code scannen")
-    cols[0].write("Scannen Sie folgenden Code mit ihrem Smartphone. Dafür benötigen Sie eine One-time Password (OTP) App.")
+    cols[0].write("Scannen Sie folgenden Code mit Ihrem Smartphone. Dafür benötigen Sie eine One-time Password (OTP) App.")
     # TODO eigene TOTP App hier verlinken, wenn im Android store?
 
     qr = qrcode.QRCode(
@@ -768,7 +768,7 @@ def reset_pw_view(reset_pw_uuid: str):
     if did_pw_reset_link_expire:
         st.title("Dieser Link ist leider abgelaufen.")
         # Offer to repeat registration:
-        st.write(f'Sie können ihr Passwort <a href="/?page={RESET_PW}" target="_self">erneut zurücksetzen</a>.', unsafe_allow_html=True)
+        st.write(f'Sie können Ihr Passwort <a href="/?page={RESET_PW}" target="_self">erneut zurücksetzen</a>.', unsafe_allow_html=True)
     else:
         st.title("Passwort zurücksetzen", anchor=False)
         pad_after_title()
@@ -803,7 +803,7 @@ def finish_reset_pw_view():
     
     st.title("Passwort zurücksetzen", anchor=False)
     pad_after_title()
-    st.write("Sie haben ihr Passwort erfolgreich zurückgesetzt.")
+    st.write("Sie haben Ihr Passwort erfolgreich zurückgesetzt.")
     st.write(f'<a href="/" target="_self">Zur Anmeldung</a>', unsafe_allow_html=True)
 
     exit(0)

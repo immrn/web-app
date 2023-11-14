@@ -26,7 +26,7 @@ if PRODUCTION:
 # Should the user see the hamburger menu in the top right corner:
 HIDE_TOP_RIGHT_HAMBURGER_MENU = getenv_bool('_HIDE_TOP_RIGHT_HAMBURGER_MENU_', True)
 
-footer=f"""
+STREAMLIT_STYLE=f"""
     <style>
         {"#" if HIDE_TOP_RIGHT_HAMBURGER_MENU else ""}MainMenu {{visibility: hidden;}}
 
@@ -42,7 +42,13 @@ footer=f"""
             text-decoration: underline;
         }}
 
-        footer {{visibility: hidden;}}
+        .main > .block-container {{
+            padding-top: 1rem;
+            padding-bottom: 0rem;
+            padding-left: 4rem;
+            padding-right: 4rem;
+        }}
+        header {{visibility: hidden;}}
 
         a:hover,  a:active {{
             color: #42D0C9;
@@ -50,6 +56,13 @@ footer=f"""
             text-decoration: underline;
         }}
 
+        footer {{visibility: hidden;}}
+    </style>
+"""
+
+CUSTOM_FOOTER =f"""
+    <style>
+        /* ------- Footer ------- */
         .footer {{
             position: fixed;
             left: 0;
