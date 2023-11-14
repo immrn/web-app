@@ -50,17 +50,15 @@ def contact():
 
 
 def download():
-
-    os = st_javascript("""window.navigator.platform;""")
-    st.write(f"OS = {os}")
-    os = st_javascript("""navigator.appVersion.indexOf('Win');""")
-    st.write(f"OS = {'Windows' if os != -1 else 'not Windows'}")
-
+    is_windows = True if st_javascript("""navigator.appVersion.indexOf('Win');""") != -1 else False
     link_chrome_download = "https://www.google.com/chrome/"
 
     st.title("Blue TOTP installieren")
+
     st.markdown("Diese Anleitung hilft Ihnen, Blue TOTP auf ihrem Windows PC und auf Ihrem Android Smartphone zu installieren.")
     st.subheader("Voraussetzungen")
+    if not is_windows:
+        st.error("Sie befinden sich aktuell nicht auf einem Windows PC. Wechseln Sie auf einen Windows PC und rufen Sie diese Website erneut auf.")
     st.markdown(
         f"""
         - bluetoothfähiger Windows PC + [Chrome Browser]({link_chrome_download})
