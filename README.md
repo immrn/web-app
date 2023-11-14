@@ -25,11 +25,13 @@ streamlit run main.py
 ## Remote
 -  https://totp-study.informatik.tu-freiberg.de
 - `$ ssh root@docker2.xsitepool.tu-freiberg.de -p2222`
-- run `./setup.sh`
+- `$ export PRODUCTION="True"`
+- `$ git clone https://github.com/immrn/web-app.git`
+- `$ sh setup.sh`
+- `$ . ./venv/bin/activate`
+- `$ streamlit run main.py --server.port=443 --server.address=0.0.0.0`
 - 443 und 80 werden aktuell via 6001 und 6002 nach außen geroutet
 - `/share` ist persistent
-- `streamlit run main.py --server.port 6001`
-- python3.11 -m http.server 6001
 - screen:
     - `$ screen -S SESSION_NAME` create session
     - `$ screen -ls` list sessions

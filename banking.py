@@ -74,7 +74,7 @@ def transaction_view():
         with st.spinner(""):
             time.sleep(2)
         st.session_state[Key.state] = TRANSACTION_SUCCESS
-        st.experimental_rerun()
+        st.rerun()
     if cancel:
         st.info("Überweisung abgebrochen")
 

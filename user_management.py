@@ -37,8 +37,8 @@ PATH_TO_EMAIL_PW_FILE = config.PATH_TO_EMAIL_PW_FILE  # file containing the pass
 # But you should not keep the timeout value too big. Attackers could block emails by walking through registration processes.
 REGISTRATION_TIMEOUT = dt.timedelta(minutes=30)
 REGISTRATION_TIMEOUT_STRING = "30 Minuten"   # timeout as string for the email
-RESET_PW_TIMEOUT = dt.timedelta(minutes=15)
-RESET_PW_TIMEOUT_STRING = "15 Minuten"  # timeout as string for the email
+RESET_PW_TIMEOUT = dt.timedelta(minutes=10)
+RESET_PW_TIMEOUT_STRING = "10 Minuten"  # timeout as string for the email
 INVALID_USERNAME_SYMBOLS = ["@"]  # keep the "@" in this list!
 FORCE_TOTP_SETUP = True  # if True users have to setup totp once after logging in
 PW_MIN_LENGTH = 8
@@ -366,7 +366,7 @@ class Users:
 
         return Users._send_email_(
             email=email,
-            subject="Registrierung für die Nutzerstudie zur TOTP Authentication",
+            subject="Registrierung beim Webservice der Nutzerstudie zur TOTP Authentication",
             html=html)
 
     @staticmethod
@@ -396,20 +396,19 @@ class Users:
         )
 
         # mailto:name@bla.de?subject=Das ist ein Betreff
-        subject="Passwort zurücksetzen - Nutzerstudie zur TOTP Authentication"
+        subject="Passwort zurücksetzen - Webservice der Nutzerstudie zur TOTP Authentication"
         return Users._send_email_(
             email=email,
             subject=subject,
             html=html)
 
     @staticmethod
-    def check_expiration_of_uuid(property: Literal["reg_uuid", "reset_pw_uuid"] ,uuid: str) -> bool:
+    def did_uuid_expire(property: Literal["reg_uuid", "reset_pw_uuid"] ,uuid: str) -> bool:
         """!
-        Checks if the registration or reset_pw link did expire. If not expired, sets the reg_uuid or reset_pw_uuid in the database to "-" (means user did register/reset pw).
+        Checks if the registration or reset_pw link did expire.
         @param property: "reg_uuid" or "reset_pw_uuid"
         @param uuid: UUID set for a user to complete their registration or reset passwort
-        @return: False if the registration / reset pw link expired or there was no or more than a single matching reg_uuid / reset_pw_uuid in the table of users.
-            This should never happen. True if the uuid didn't expire.
+        @return: True if the registration / reset pw link expired. False otherwise.
         """
         if property == "reg_uuid":
             col_uuid = Users.Col.reg_uuid
@@ -419,30 +418,17 @@ class Users:
             col_timeout = Users.Col.reset_pw_timeout_utc
         else:
             raise ValueError(f"Param 'property' = {property} must have the value 'reg_uuid' or 'reset_pw_uuid'.")
-        
-        df = Users.df()
-        if (property == "reg_uuid" and uuid == "-") or df[col_uuid].loc[df[col_uuid] == uuid].shape[0] != 1:
-            return False
-        
+              
         user = Users.get_user_by(col_uuid, uuid)
-        user_id = user[Users.Col.id]
-        print("\n---------\n")
-        print(user)
-        print(user[col_timeout])
+        if user == {}:
+            return True
 
         if property == "reg_uuid" and dt.datetime.utcnow() > user[col_timeout]:
-            # registration link expired --> delete this user:
-            Users.rm_user(user_id)
-            return False
-        
+            return True
         elif property == "reset_pw_uuid" and dt.datetime.utcnow() > dt.datetime.fromisoformat(user[col_timeout]):
-            df.at[user_id, col_uuid] = "-"
-            return False
+            return True
         
-        df.at[user_id, col_uuid] = "-"
-
-        df.to_csv(Users.csv_path)
-        return True
+        return False
 
     @staticmethod
     def did_user_finish_registration(user_id: int):
@@ -546,7 +532,7 @@ def login_view():
         st.warning("Dieser Benutzer existiert nicht.")
         st.session_state.focus_id = 0
     elif ret_check_login == Users.RetCheckLogin.not_fully_registered:
-        st.info("Registrierung noch nicht abgeschlossen. Schau in dein Email-Postfach und im Spam.")
+        st.info("Registrierung noch nicht abgeschlossen. Schauen Sie in ihr Email-Postfach und im Spam.")
 
     def pw_changed():
         st.session_state[Key.changed_pw] = True
@@ -614,11 +600,11 @@ def login_view():
             if state.value(Key.state) == LOGGED_IN:
                 track.login()
             
-            st.experimental_rerun()
+            st.rerun()
         else:
             st.session_state[Key.changed_pw] = False
             st.session_state[Key.changed_username_or_email] = False
-            st.experimental_rerun()
+            st.rerun()
     
     st.session_state[Key.changed_pw] = False
     st.session_state[Key.changed_username_or_email] = False
@@ -643,7 +629,7 @@ def totp_view():
                 totp=totp_input):
             track.login()
             st.session_state[Key.state] = LOGGED_IN
-            st.experimental_rerun()
+            st.rerun()
         else:
             st.warning("TOTP ungültig")
 
@@ -673,7 +659,7 @@ def setup_totp_view():
 
     # Step 1: scan qr code
     cols[0].header("1. QR-Code scannen")
-    cols[0].write("Scanne folgenden Code mit deinem Smartphone. Wahrscheinlich benötigst Du eine One-time Password (OTP) App.")
+    cols[0].write("Scannen Sie folgenden Code mit ihrem Smartphone. Dafür benötigen Sie eine One-time Password (OTP) App.")
     # TODO eigene TOTP App hier verlinken, wenn im Android store?
 
     qr = qrcode.QRCode(
@@ -710,7 +696,7 @@ def setup_totp_view():
             st.session_state[Key.state] = LOGGED_IN
             cols[1].success("TOTP bestätigt!")
             time.sleep(1.5)
-            st.experimental_rerun()
+            st.rerun()
         else:
             cols[1].warning("TOTP ungültig")
 
@@ -723,7 +709,7 @@ def finish_totp_setup_view():
     st.subheader("Zwei-Faktor-Authentisierung wurde eingerichtet! :white_check_mark:", anchor=False)
     time.sleep(2)
     st.session_state[Key.state] = LOGGED_IN
-    st.experimental_rerun()
+    st.rerun()
 
 
 def initiate_reset_pw_view():
@@ -763,7 +749,7 @@ def initiate_reset_pw_view():
             else:
                 st.session_state[Key.user_id] = user[Users.Col.id]
                 st.session_state[Key.state] = RESET_PW_MAIL_SENT
-                st.experimental_rerun()
+                st.rerun()
 
     exit(0)
 
@@ -779,11 +765,15 @@ def reset_pw_mail_sent_view(user_id: int):
 
 def reset_pw_view(reset_pw_uuid: str):
     pad_top()
-    reset_pw_allowed = Users.check_expiration_of_uuid(property="reset_pw_uuid", uuid=reset_pw_uuid)
+    did_pw_reset_link_expire = Users.did_uuid_expire(property="reset_pw_uuid", uuid=reset_pw_uuid)
     
     allow_pw_reset = True
 
-    if reset_pw_allowed:
+    if did_pw_reset_link_expire:
+        st.title("Dieser Link ist leider abgelaufen.")
+        # Offer to repeat registration:
+        st.write(f'Sie können ihr Passwort <a href="/?page={RESET_PW}" target="_self">erneut zurücksetzen</a>.', unsafe_allow_html=True)
+    else:
         st.title("Passwort zurücksetzen", anchor=False)
         pad_after_title()
 
@@ -803,11 +793,12 @@ def reset_pw_view(reset_pw_uuid: str):
             user = Users.get_user_by(property="reset_pw_uuid", value=reset_pw_uuid)
             Users.reset_pw(user_id=user[Users.Col.id], new_pw=new_pw)
             st.session_state[Key.state] = FINISH_RESET_PW
-    else:
-        st.title("Dieser Link ist leider abgelaufen.")
-        # Offer to repeat registration:
-        st.write(f'Du kannst dein Passwort <a href="/?page={RESET_PW}" target="_self">erneut zurücksetzen</a>.', unsafe_allow_html=True)
-    
+            # Reset in db:
+            df = Users.df()
+            df.at[user[Users.Col.id], Users.Col.reset_pw_uuid] = "-"
+            df.to_csv(Users.csv_path)
+            st.rerun()
+            
     exit(0)
 
 
@@ -816,7 +807,7 @@ def finish_reset_pw_view():
     
     st.title("Passwort zurücksetzen", anchor=False)
     pad_after_title()
-    st.write("Du hast dein Passwort erfolgreich zurückgesetzt.")
+    st.write("Sie haben ihr Passwort erfolgreich zurückgesetzt.")
     st.write(f'<a href="/" target="_self">Zur Anmeldung</a>', unsafe_allow_html=True)
 
     exit(0)
@@ -876,7 +867,7 @@ def registration_view():
         st.session_state[Key.state] = REGISTRATION_MAIL_SENT
         user_id = Users.get_user_by("name", username)[Users.Col.id]
         st.session_state[Key.user_id] = user_id
-        st.experimental_rerun()
+        st.rerun()
 
     exit(0)
 
@@ -893,16 +884,26 @@ def registration_mail_sent_view():
 
 def finish_registration_view(reg_uuid: str):
     pad_top()
-    registration_finished = Users.check_expiration_of_uuid(property="reg_uuid", uuid=reg_uuid)
+    registration_expired = Users.did_uuid_expire(property="reg_uuid", uuid=reg_uuid)
 
-    if registration_finished:
+    if registration_expired:
+        user = Users.get_user_by("reg_uuid", reg_uuid)
+        if user != {}:
+            Users.rm_user(user[Users.Col.id])
+        st.title("Ihr Link zur Registrierung ist abgelaufen.", anchor=False)
+        pad_after_title()
+        # Offer to repeat registration:
+        st.write(f'Registriere dich <a href="/?page={REGISTRATION}" target="_self">hier</a> erneut.', unsafe_allow_html=True)
+    else:
         st.title("Registrierung abgeschlossen", anchor=False)
         pad_after_title()
         st.write("Du hast dich erfolgreich registriert.")
         st.write(f'<a href="/" target="_self">Zur Anmeldung</a>', unsafe_allow_html=True)
-    else:
-        st.title("Dein Link zur Registrierung ist abgelaufen.", anchor=False)
-        pad_after_title()
-        # Offer to repeat registration:
-        st.write(f'Registriere dich <a href="/?page={REGISTRATION}" target="_self">hier</a> erneut.', unsafe_allow_html=True)
+
+        user = Users.get_user_by(property="reg_uuid", value=reg_uuid)
+        df = Users.df()
+        print(df[Users.Col.reg_uuid])
+        df.at[user[Users.Col.id], Users.Col.reg_uuid] = "-"
+        print(df[Users.Col.reg_uuid])
+        df.to_csv(Users.csv_path)
     exit(0)

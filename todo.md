@@ -15,3 +15,5 @@ Immer sauber unterscheiden, Konsistenz in Wortwahl für die einzlnenen Schritte.
 - für einen Webservice aktivieren (z.B. statt einrichten)
 - 2fA durchführen
 - 
+
+LICENSING für FreeOTP+, darf ich Blue TOTP einfach in den Appstore hochladen?

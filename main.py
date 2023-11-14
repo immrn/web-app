@@ -3,11 +3,10 @@ import streamlit as st
 query_params = st.experimental_get_query_params()
 called_download_page = False
 if "page" in query_params.keys():
-    called_download_page = True
     if query_params["page"][0] == "download":
-
+        called_download_page = True
         st.set_page_config(page_title="Blue TOTP", page_icon="")
-else:
+if not called_download_page:
     st.set_page_config(page_title="Simuliertes Banking", page_icon="🏦")
 
 import banking

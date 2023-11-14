@@ -93,7 +93,7 @@ def _setup_(
             if os.path.exists(_SAVE_FILE_PATH_ + ".1"):
                 os.rename(_SAVE_FILE_PATH_ + ".1", _SAVE_FILE_PATH_.split('.')[0] + "_until_" + timestamp + "_1.csv")
         except FileNotFoundError:
-            st.experimental_rerun()
+            st.rerun()
 
     count_handlers = 3 if console_output else 2
     if logger.hasHandlers():
