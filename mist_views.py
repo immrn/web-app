@@ -44,6 +44,18 @@ def contact():
     exit(0)
 
 
+def _not_windows_message():
+    st.error("Sie befinden sich aktuell nicht auf einem Windows PC. Wechseln Sie auf einen Windows PC und rufen Sie diese Website erneut auf.")
+
+
+def _download_button_blue_totp_service():
+    st.download_button(
+        label="Blue TOTP Service herunterladen",
+        file_name="todo-test-file",
+        data="TODO-testdata",
+    )
+
+
 def download():
     is_windows = True if st_javascript("""navigator.appVersion.indexOf('Win');""") != -1 else False
     link_chrome_download = "https://www.google.com/chrome/"
@@ -53,7 +65,7 @@ def download():
     st.markdown("Diese Anleitung hilft Ihnen, Blue TOTP auf Ihrem Windows PC und auf Ihrem Android Smartphone zu installieren.")
     st.subheader("Voraussetzungen")
     if not is_windows:
-        st.error("Sie befinden sich aktuell nicht auf einem Windows PC. Wechseln Sie auf einen Windows PC und rufen Sie diese Website erneut auf.")
+        _not_windows_message()
     st.markdown(
         f"""
         - bluetoothfähiger Windows PC + [Chrome Browser]({link_chrome_download})
@@ -69,11 +81,8 @@ def download():
         """
     )
     cols = st.columns([1,35])
-    cols[1].download_button(
-        label="Blue TOTP Service herunterladen",
-        file_name="todo-test-file",
-        data="TODO-testdata",
-    )
+    with cols[1]:
+        _download_button_blue_totp_service()
 
     st.subheader("Installation (Android)")
     st.markdown(
@@ -82,4 +91,27 @@ def download():
         TODO Play Store Blue TOTP QR Code
         """,
     unsafe_allow_html=True)
+    exit(0)
+
+def download_only_service():
+    is_windows = True if st_javascript("""navigator.appVersion.indexOf('Win');""") != -1 else False
+
+    st.title("Blue TOTP Service")
+
+    if not is_windows:
+        _not_windows_message()
+
+    st.markdown(f"""
+        1. Laden Sie das Programm **_Blue TOTP Service_** auf Ihren Windows-PC herunter.
+        """
+    )
+    cols = st.columns([1,35])
+    with cols[1]:
+        _download_button_blue_totp_service()
+    st.markdown(f"""
+        2. Installieren Sie es.
+        3. Öffnen Sie wieder die Blue TOTP Extension in Ihrem Chrome Browser.
+        """
+    )
+
     exit(0)

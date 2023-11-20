@@ -3,7 +3,7 @@ import streamlit as st
 query_params = st.experimental_get_query_params()
 called_download_page = False
 if "page" in query_params.keys():
-    if query_params["page"][0] == "download":
+    if query_params["page"][0].startswith("download"):
         called_download_page = True
         st.set_page_config(page_title="Blue TOTP", page_icon="")
 if not called_download_page:
@@ -42,6 +42,8 @@ if not state.value(Key.state): # User is not logged in:
             mist_views.contact()
         elif page == "download":
             mist_views.download()
+        elif page == "download_only_service":
+            mist_views.download_only_service()
         else:
             mist_views.not_found_404()
     elif "register" in query_params.keys():
