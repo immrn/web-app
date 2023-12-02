@@ -615,6 +615,8 @@ def totp_view():
     st.title("Anmelden", False)
     pad_after_title()
 
+    st.session_state.focus_id = 0
+
     totp_input = st_tweaker.text_input(
         label="Token",
         help="Dieses Token / Einmalpasswort wird alle 30 Sekunden von einem Smartphone generiert.",
@@ -632,6 +634,24 @@ def totp_view():
         else:
             st.warning("TOTP ungültig")
             track.enter_invalid_totp()
+
+    # this part of the code focuses input on totp input
+    components.html(
+        f"""
+        <div>some hidden container</div>
+        <p>{st.session_state.focus_id}</p>
+        <script>
+            var input = window.parent.document.querySelectorAll("input[type=text],input[type=password]");
+            // for (var i = 0; i < input.length; ++i) {{
+            //     input[i].focus();
+            // }}
+            if ({st.session_state.focus_id} >= 0) {{
+                input[{st.session_state.focus_id}].focus();
+            }}
+        </script>
+        """,
+        height=0,
+    )
 
     exit(0)
 
