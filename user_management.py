@@ -4,6 +4,7 @@ import hashlib
 import re
 import uuid
 import smtplib, ssl
+from email.utils import formataddr
 import math
 import pyotp
 import qrcode
@@ -322,7 +323,7 @@ class Users:
         receiver_email = email
 
         msg = MIMEText(html, 'html')
-        msg['From'] = sender_email
+        msg['From'] = formataddr((config.SENDER_EMAIL_NAME, sender_email))
         msg['To'] = receiver_email
         msg['Subject'] = subject
 

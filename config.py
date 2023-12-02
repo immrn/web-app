@@ -3,6 +3,7 @@ from config_util import (getenv_bool, getenv_int, getenv_switch_str)
 PRODUCTION = getenv_bool("PRODUCTION", False)
 
 SENDER_EMAIL_ADDRESS = "user.study.totp.authentication@gmail.com"
+SENDER_EMAIL_NAME = "Nutzerstudie TOTP"
 SMTP_SERVER = "smtp.gmail.com"
 URL_BASE = "http://localhost:8501/"
 NAME_OF_APP = "Simuliertes Banking"
