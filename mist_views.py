@@ -60,7 +60,7 @@ def download():
     is_windows = True if st_javascript("""navigator.appVersion.indexOf('Win');""") != -1 else False
     link_chrome_download = "https://www.google.com/chrome/"
 
-    st.title("Blue TOTP installieren")
+    st.title("Blue TOTP installieren", anchor=False)
 
     st.markdown("Diese Anleitung hilft Ihnen, Blue TOTP auf Ihrem Windows PC und auf Ihrem Android Smartphone zu installieren.")
     st.subheader("Voraussetzungen")
@@ -96,7 +96,7 @@ def download():
 def download_only_service():
     is_windows = True if st_javascript("""navigator.appVersion.indexOf('Win');""") != -1 else False
 
-    st.title("Blue TOTP Service")
+    st.title("Blue TOTP Service", anchor=False)
 
     if not is_windows:
         _not_windows_message()

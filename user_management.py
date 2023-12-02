@@ -612,7 +612,7 @@ def login_view():
 
 def totp_view():
     pad_top()
-    st.title("Anmelden")
+    st.title("Anmelden", False)
     pad_after_title()
 
     totp_input = st_tweaker.text_input(
@@ -711,7 +711,7 @@ def finish_totp_setup_view():
 
 def initiate_reset_pw_view():
     pad_top()
-    st.title("Passwort zurücksetzen")
+    st.title("Passwort zurücksetzen", False)
     pad_after_title()
     
     allow_reset = True
@@ -767,7 +767,7 @@ def reset_pw_view(reset_pw_uuid: str):
     allow_pw_reset = True
 
     if did_pw_reset_link_expire:
-        st.title("Dieser Link ist leider abgelaufen.")
+        st.title("Dieser Link ist leider abgelaufen.", False)
         # Offer to repeat registration:
         st.write(f'Sie können Ihr Passwort <a href="/?page={RESET_PW}" target="_self">erneut zurücksetzen</a>.', unsafe_allow_html=True)
     else:
@@ -812,7 +812,7 @@ def finish_reset_pw_view():
 
 def registration_view():
     pad_top()
-    st.title("Registrieren")
+    st.title("Registrieren", False)
     pad_after_title()
 
     allow_register = True
