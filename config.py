@@ -3,10 +3,10 @@ from config_util import (getenv_bool, getenv_int, getenv_switch_str)
 PRODUCTION = getenv_bool("PRODUCTION", False)
 
 WEBSERVICE_NAME = "SimPay"
-WEBSERVICE_ICON = "💸" # "🏦"
+WEBSERVICE_ICON = "💸"
 
 SENDER_EMAIL_ADDRESS = "user.study.totp.authentication@gmail.com"
-SENDER_EMAIL_NAME = "Nutzerstudie TOTP"
+SENDER_EMAIL_NAME = WEBSERVICE_NAME
 SMTP_SERVER = "smtp.gmail.com"
 URL_BASE = "http://localhost:8501/"
 NAME_OF_APP = "Simuliertes Banking"
