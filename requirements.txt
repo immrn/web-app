@@ -3,3 +3,4 @@ streamlit-javascript
 pandas
 pyotp
 qrcode
+millify

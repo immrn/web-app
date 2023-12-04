@@ -11,17 +11,18 @@ import qrcode
 import datetime as dt
 import pandas as pd
 import streamlit as st
+import random
 from enum import Enum
 from email.mime.text import MIMEText
 from typing import Literal
 from tweaker import st_tweaker
 import streamlit.components.v1 as components
 
-import state
 import util
 import config
 import usage_tracking as track
 from constants import SessionStateKey
+from state import init_state, set_state, get_state
 
 # TODO:
 # We could use cookies to keep an user logged in at multiple tabs. https://github.com/Mohamed-512/Extra-Streamlit-Components#cookie-manager
@@ -61,6 +62,8 @@ LOGGED_IN = "logged_in"
 
 def checkFiles():
     exit_app = False
+    if not os.path.isdir(config.PATH_TO_TRANSACTIONS_DIR):
+        os.mkdir(config.PATH_TO_TRANSACTIONS_DIR)
     # DB file user_info.csv:
     if not os.path.exists(Users.csv_path):
         props = [attr for attr in dir(Users.Col) if not callable(getattr(Users.Col, attr)) and not attr.startswith("__")]
@@ -91,6 +94,7 @@ class Users:
         reg_timeout_utc = "reg_timeout_utc"
         reset_pw_uuid = "reset_pw_uuid"
         reset_pw_timeout_utc = "reset_pw_timeout_utc"
+        balance = "balance"
 
     @staticmethod
     def isNameAvailable(name: str):
@@ -162,11 +166,12 @@ class Users:
             Users.Col.secret: secret,
             Users.Col.reg_uuid: reg_uuid,
             Users.Col.reg_timeout_utc: timeout,
+            Users.Col.balance: random.randrange(5000, 15000)
         }
         new_user = pd.DataFrame(data=[new_user])
         new_user = new_user.set_index(Users.Col.id)
         
-        df = pd.concat([df, new_user], ignore_index=True)
+        df = pd.concat([df, new_user])
         df.index.name = Users.Col.id
         df.to_csv(Users.csv_path)
         return reg_uuid
@@ -262,6 +267,24 @@ class Users:
         df[Users.Col.reg_timeout_utc] = pd.to_datetime(df[Users.Col.reg_timeout_utc])
         df = df.set_index(Users.Col.id)
         return df
+    
+    @staticmethod
+    def get_filepath_transaction_csv(user_id):
+        slash = "" if (config.PATH_TO_TRANSACTIONS_DIR.endswith("/")) else "/"
+        path = config.PATH_TO_TRANSACTIONS_DIR + slash + str(user_id) + ".csv"
+        return path
+
+    @staticmethod
+    def df_transaction(user_id) -> pd.DataFrame:
+        filepath = Users.get_filepath_transaction_csv(user_id)
+        df = pd.read_csv(filepath, sep=",")
+        df["utc_timestamp"] = pd.to_datetime(df["utc_timestamp"])
+        df["recipient"] = df["recipient"].astype(str)
+        df["message"] = df["message"].astype(str)
+        df["value"] = df["value"].astype(float)
+        df = df.set_index("utc_timestamp")
+        return df
+        
     
     @staticmethod
     def get_user_by(property: Literal["id", "name", "email", "reg_uuid", "reset_pw_uuid"], value) -> dict():
@@ -473,6 +496,49 @@ class Users:
             return Users.RetCheckLogin.invalid_pw
         
         return Users.RetCheckLogin.valid
+    
+    @staticmethod
+    def do_transaction(user_id, recipient: str, value: float, message: str):
+        # Adjust balance:
+        df = Users.df()
+        df.at[user_id, Users.Col.balance] -= value
+        df.to_csv(Users.csv_path)
+
+        # Create and store transaction:
+        path = Users.get_filepath_transaction_csv(user_id)
+
+        def create_transaction_entry():
+            new_transaction = {
+                "utc_timestamp": dt.datetime.utcnow(),
+                "recipient": recipient,
+                "value": value,
+                "message": message
+            }
+            new_transaction = pd.DataFrame(data=[new_transaction])
+            return new_transaction.set_index("utc_timestamp")
+
+        if not os.path.exists(path):
+            df = create_transaction_entry()
+        else:    
+            df = Users.df_transaction(user_id)
+            new_transaction = create_transaction_entry()
+            df = pd.concat([df, new_transaction])
+            df.index.name = "utc_timestamp"
+        
+        df.to_csv(path)
+
+    @staticmethod
+    def get_transactions(user_id):
+        path = Users.get_filepath_transaction_csv(user_id)
+        if os.path.exists(path):
+            df = Users.df_transaction(user_id)
+            df = df.sort_index()
+            df.index = df.index.tz_localize('utc').tz_convert('Europe/Berlin')
+            df.index.name = "timestamp"
+            return df
+        else:
+            return pd.DataFrame()
+
 
 def pad(lines: int):
     for i in range(lines):
@@ -487,8 +553,7 @@ def pad_after_title():
     pad(2)
 
 
-def login_view():
-    # TODO block IP address after n failed login attempts for m hours.
+def login_header():
     col1, col2 = st.columns([2,9])
     with col1:
         st.markdown("""
@@ -499,21 +564,24 @@ def login_view():
         </style>
         """, unsafe_allow_html=True)
 
-        st.markdown('<div class="big-font">🏦</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="big-font">{config.WEBSERVICE_ICON}</div>', unsafe_allow_html=True)
     with col2:
         pad(1)
-        st.title("Simuliertes Banking", False)
-        st.markdown("_Simulierter Banking-Dienst einer Nutzerstudie_")
+        st.title(config.WEBSERVICE_NAME, False)
+        st.markdown("_Simulierter Online-Zahlungsdienst einer Nutzerstudie_")
     pad(1)
     st.header("Anmelden", False)
     pad_after_title()
 
-    if "focus_id" not in st.session_state:
-        st.session_state.focus_id = 0
 
-    ret_check_login = state.value(Key.ret_check_login)
-    changed_pw = state.value(Key.changed_pw)
-    changed_username_or_email = state.value(Key.changed_username_or_email)
+def login_view():
+    # TODO block IP address after n failed login attempts for m hours.
+
+    init_state("focus_id", 0)
+
+    ret_check_login = get_state(Key.ret_check_login)
+    changed_pw = get_state(Key.changed_pw)
+    changed_username_or_email = get_state(Key.changed_username_or_email)
 
     def username_or_email_changed():
         st.session_state[Key.changed_username_or_email] = True
@@ -607,14 +675,11 @@ def login_view():
     
     st.session_state[Key.changed_pw] = False
     st.session_state[Key.changed_username_or_email] = False
+    st.markdown(config.CUSTOM_FOOTER, unsafe_allow_html=True)
     exit(0)
 
 
 def totp_view():
-    pad_top()
-    st.title("Anmelden", False)
-    pad_after_title()
-
     st.session_state.focus_id = 0
 
     totp_input = st_tweaker.text_input(
@@ -626,7 +691,7 @@ def totp_view():
 
     if totp_input:
         if Users.check_totp(
-                user_id=state.value(Key.user_id),
+                user_id=get_state(Key.user_id),
                 totp=totp_input):
             st.session_state[Key.state] = LOGGED_IN
             track.enter_valid_totp()
@@ -657,11 +722,15 @@ def totp_view():
 
 
 def setup_totp_view():
-    st.title("Einrichten der Zwei-Faktor-Authentisierung", anchor=False)
-    pad_after_title()
+    st.title("Zwei-Faktor-Authentisierung", anchor=False)
+    pad(1)
 
-    cols = st.columns(2)
-    user_id = state.value(Key.user_id)
+    st.write(f"Um {config.WEBSERVICE_NAME} zu nutzen, müssen Sie eine Zwei-Faktor-Authentisierung einrichten.")
+    pad(1)
+
+    col_spec = [6,5]
+    cols = st.columns(col_spec)
+    user_id = get_state(Key.user_id)
 
     if Key.curr_totp_uri_and_secret not in st.session_state:
         uri, secret = Users.generate_totp_secret_uri(user_id)
@@ -674,7 +743,7 @@ def setup_totp_view():
         exit(0)
 
     # Step 1: scan qr code
-    cols[0].header("1. QR-Code scannen")
+    cols[0].header("1. QR-Code scannen", False)
     cols[0].write("Scannen Sie folgenden Code mit Ihrem Smartphone. Dafür benötigen Sie eine One-time Password (OTP) App.")
     # TODO eigene TOTP App hier verlinken, wenn im Android store?
 
@@ -693,10 +762,9 @@ def setup_totp_view():
     os.remove(file_name)
 
     # Step 2: check totp
-    cols = st.columns(2)
-    cols[0].write("")
-    cols[0].header("2. Prüfen")
-    cols[0].write("Gib das TOTP an, welches die App generiert hat.")
+    cols = st.columns(col_spec)    
+    cols[0].header("2. Prüfen", False)
+    cols[0].write("Geben Sie das TOTP an, welches die App generiert hat.")
 
     cols[1].write("")
     cols[1].write("")
@@ -768,6 +836,7 @@ def initiate_reset_pw_view():
                 st.session_state[Key.state] = RESET_PW_MAIL_SENT
                 st.rerun()
 
+    st.markdown(config.CUSTOM_FOOTER, unsafe_allow_html=True)
     exit(0)
 
 
@@ -777,6 +846,7 @@ def reset_pw_mail_sent_view(user_id: int):
     pad_after_title()
     email = Users.get_user_by("id", user_id)[Users.Col.email]
     st.subheader(f"Es wurde eine Email an {email} gesendet. Befolge die darin befindlichen Anweisungen. Schau auch im Spam-Ordner.", anchor=False)
+    st.markdown(config.CUSTOM_FOOTER, unsafe_allow_html=True)
     exit(0)
 
 
@@ -815,7 +885,8 @@ def reset_pw_view(reset_pw_uuid: str):
             df.at[user[Users.Col.id], Users.Col.reset_pw_uuid] = "-"
             df.to_csv(Users.csv_path)
             st.rerun()
-            
+    
+    st.markdown(config.CUSTOM_FOOTER, unsafe_allow_html=True)
     exit(0)
 
 
@@ -827,6 +898,7 @@ def finish_reset_pw_view():
     st.write("Sie haben Ihr Passwort erfolgreich zurückgesetzt.")
     st.write(f'<a href="/" target="_self">Zur Anmeldung</a>', unsafe_allow_html=True)
 
+    st.markdown(config.CUSTOM_FOOTER, unsafe_allow_html=True)
     exit(0)
 
 
@@ -869,6 +941,7 @@ def registration_view():
     if register and allow_register:
         if "" in [email, username, pw, pw_repeated]:
             st.warning("Füllen Sie jedes Feld aus.")
+            st.markdown(config.CUSTOM_FOOTER, unsafe_allow_html=True)
             exit(0)
 
         util.center_spinner()  
@@ -886,6 +959,7 @@ def registration_view():
         st.session_state[Key.user_id] = user_id
         st.rerun()
 
+    st.markdown(config.CUSTOM_FOOTER, unsafe_allow_html=True)
     exit(0)
 
 
@@ -893,9 +967,10 @@ def registration_mail_sent_view():
     pad_top()
     st.title("Fast geschafft!:rocket:", anchor=False)
     pad_after_title()
-    user_id = state.value(Key.user_id)
+    user_id = get_state(Key.user_id)
     email = Users.get_user_by("id", user_id)[Users.Col.email]
     st.subheader(f"Dir wurde eine Email an {email} gesendet, um die Registierung abzuschließen. Schau auch im Spam-Ordner nach.", anchor=False)
+    st.markdown(config.CUSTOM_FOOTER, unsafe_allow_html=True)
     exit(0)
 
 
@@ -919,8 +994,7 @@ def finish_registration_view(reg_uuid: str):
 
         user = Users.get_user_by(property="reg_uuid", value=reg_uuid)
         df = Users.df()
-        print(df[Users.Col.reg_uuid])
         df.at[user[Users.Col.id], Users.Col.reg_uuid] = "-"
-        print(df[Users.Col.reg_uuid])
         df.to_csv(Users.csv_path)
+    st.markdown(config.CUSTOM_FOOTER, unsafe_allow_html=True)
     exit(0)

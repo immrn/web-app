@@ -1,4 +1,8 @@
 import streamlit as st
+import config
+
+def header():
+    st.header(config.WEBSERVICE_ICON + " " + config.WEBSERVICE_NAME, False)
 
 
 def center_spinner():

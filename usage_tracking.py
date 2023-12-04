@@ -136,7 +136,7 @@ def _setup_(
 def init(st_key_for_username: str):
     global _track_logger_
     _track_logger_ = _setup_(
-        modul_name="article-production",
+        modul_name="web-app",
         console_output=True,
         file_path=_SAVE_FILE_PATH_,
         file_size=25 * 1024 * 1024
@@ -234,6 +234,10 @@ def enter_invalid_totp(remark: str = None):
     :param remark: a short annotation
     """
     return _track_(action="entered_invalid_totp", remark=remark)
+
+
+def logout():
+    return _track_(action="logout")
 
 
 def enter_valid_totp():

@@ -2,6 +2,9 @@ from config_util import (getenv_bool, getenv_int, getenv_switch_str)
 
 PRODUCTION = getenv_bool("PRODUCTION", False)
 
+WEBSERVICE_NAME = "SimPay"
+WEBSERVICE_ICON = "💸" # "🏦"
+
 SENDER_EMAIL_ADDRESS = "user.study.totp.authentication@gmail.com"
 SENDER_EMAIL_NAME = "Nutzerstudie TOTP"
 SMTP_SERVER = "smtp.gmail.com"
@@ -10,8 +13,9 @@ NAME_OF_APP = "Simuliertes Banking"
 PATH_TO_USER_DB_CSV = "volume/user_info.csv"
 PATH_TO_EMAIL_PW_FILE = "gmail_pw.txt"
 PATH_TO_USAGE_TRACKING_FILE = "volume/usage_tracking.csv"
+PATH_TO_TRANSACTIONS_DIR = "volume/transactions"
 
-COLOR_PRIMARY = "#FF4B4B"
+COLOR_PRIMARY = "#6bfab1"
 COLOR_SECONDARY = "#FAFAFA"
 COLOR_BACKGROUND = "#0E1117"
 COLOR_SECONDARY_BACKGROUND = "#262730"
@@ -21,11 +25,12 @@ if PRODUCTION:
     PATH_TO_USER_DB_CSV = "/share/volume/user_info.csv"
     PATH_TO_EMAIL_PW_FILE = "/share/volume/gmail_pw.txt"
     PATH_TO_USAGE_TRACKING_FILE = "/share/volume/usage_tracking.csv"
+    PATH_TO_TRANSACTIONS_DIR = "/share/volume/transactions"
 
 # -------------------- Streamlit stuff -------------------- #
 
 # Should the user see the hamburger menu in the top right corner:
-HIDE_TOP_RIGHT_HAMBURGER_MENU = getenv_bool('_HIDE_TOP_RIGHT_HAMBURGER_MENU_', True)
+HIDE_TOP_RIGHT_HAMBURGER_MENU = PRODUCTION
 
 STREAMLIT_STYLE=f"""
     <style>
@@ -63,9 +68,13 @@ STREAMLIT_STYLE=f"""
 
 CUSTOM_FOOTER =f"""
     <style>
+        html {{
+            min-height: 100%;
+        }}
         /* ------- Footer ------- */
         .footer {{
             position: fixed;
+            margin-top: 40px;
             left: 0;
             bottom: 0;
             width: 100%;

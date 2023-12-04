@@ -18,8 +18,10 @@ class SessionStateKey:
     class Banking:
         _prefix = "banking" + "-"
         recipient = _prefix + "recipient"
-        reference = _prefix + "reference"
+        message = _prefix + "message"
         value = _prefix + "value"
         confirm = _prefix + "confirm"
         cancel = _prefix + "cancel"
         state = _prefix + "state"
+        new_payment = _prefix + "new_payment"
+        logout = _prefix + "logout"
