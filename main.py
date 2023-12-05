@@ -33,7 +33,7 @@ else:
     with cols[0]:
         util.header()
     with cols[1]:
-        if len(query_params.keys()) == 0:
+        if len(query_params.keys()) == 0 and Key.state in st.session_state and st.session_state[Key.state] not in [um.TOTP, um.SETUP_TOTP, um.FINISH_TOTP_SETUP]:
             banking.logout_button()
 
 # Login:

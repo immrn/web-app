@@ -29,7 +29,6 @@ from state import init_state, set_state, get_state
 # Also we could use the Router feature to use real URL paths instead of query params: https://github.com/Mohamed-512/Extra-Streamlit-Components#router
 
 # Editable constants:
-NAME_OF_APP = config.NAME_OF_APP  # will appear in the uri if you generate TOTPs
 URL_BASE = config.URL_BASE  # base link of your web app
 PATH_TO_USER_DB_CSV = config.PATH_TO_USER_DB_CSV  # where you store your users authentication information
 SMTP_SERVER = config.SMTP_SERVER  # smtp server of sender email adress
@@ -221,9 +220,9 @@ class Users:
             return False, False
         secret = pyotp.random_base32()
         # https://github.com/google/google-authenticator/wiki/Key-Uri-Format
-        uri = f"otpauth://totp/{NAME_OF_APP}:{email}?" + \
+        uri = f"otpauth://totp/{config.WEBSERVICE_NAME}:{email}?" + \
             f"secret={secret}&" + \
-            f"issuer={NAME_OF_APP}&" + \
+            f"issuer={config.WEBSERVICE_NAME}&" + \
             f"algorithm=SHA1&" + \
             f"digits=6&" + \
             f"period=30"
@@ -373,6 +372,7 @@ class Users:
         
         username = Users.get_user_by("email", email)[Users.Col.name]
 
+        html = html.replace("{_webservice_name_}", config.WEBSERVICE_NAME)
         html = html.replace("{_primary_color_}", Users.email_primary_color)
         html = html.replace("{_background_color_}", Users.email_bg_color)
         html = html.replace("{username}", username)
@@ -390,7 +390,7 @@ class Users:
 
         return Users._send_email_(
             email=email,
-            subject="Registrierung beim Webservice der Nutzerstudie zur TOTP Authentication",
+            subject=f"Registrierung abschließen - {config.WEBSERVICE_NAME}",
             html=html)
 
     @staticmethod
@@ -404,6 +404,7 @@ class Users:
 
         username = Users.get_user_by("email", email)[Users.Col.name]
 
+        html = html.replace("{_webservice_name_}", config.WEBSERVICE_NAME)
         html = html.replace("{_primary_color_}", Users.email_primary_color)
         html = html.replace("{_background_color_}", Users.email_bg_color)
         html = html.replace("{username}", username)
@@ -420,7 +421,7 @@ class Users:
         )
 
         # mailto:name@bla.de?subject=Das ist ein Betreff
-        subject="Passwort zurücksetzen - Webservice der Nutzerstudie zur TOTP Authentication"
+        subject=f"Passwort zurücksetzen - {config.WEBSERVICE_NAME}"
         return Users._send_email_(
             email=email,
             subject=subject,

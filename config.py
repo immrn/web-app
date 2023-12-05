@@ -9,7 +9,6 @@ SENDER_EMAIL_ADDRESS = "user.study.totp.authentication@gmail.com"
 SENDER_EMAIL_NAME = WEBSERVICE_NAME
 SMTP_SERVER = "smtp.gmail.com"
 URL_BASE = "http://localhost:8501/"
-NAME_OF_APP = "Simuliertes Banking"
 PATH_TO_USER_DB_CSV = "volume/user_info.csv"
 PATH_TO_EMAIL_PW_FILE = "gmail_pw.txt"
 PATH_TO_USAGE_TRACKING_FILE = "volume/usage_tracking.csv"
@@ -19,6 +18,8 @@ COLOR_PRIMARY = "#6bfab1"
 COLOR_SECONDARY = "#FAFAFA"
 COLOR_BACKGROUND = "#0E1117"
 COLOR_SECONDARY_BACKGROUND = "#262730"
+COLOR_OUTGOING_MONEY = "#ff4545"
+COLOR_GREY_TEXT = "#ABABAB"
 
 if PRODUCTION:
     URL_BASE = "https://totp-study.informatik.tu-freiberg.de/"

@@ -18,15 +18,15 @@ TRANSACTION_SUCCESS = "transaction_success"
 BALANCE_OVERDRAW = 10000
 
 # TODO anpassen falls SimPay ok
-_RECIPIENT_HELP = "Geben Sie eine beliebige IBAN an.  \nDies ist keine echte Online-Zahlung."
-_REFERENCE_HELP = "Geben Sie eine beliebige Nachricht an.  \nDies ist keine echte Online-Zahlung."
-_VALUE_HELP = "Geben Sie einen beliebigen Betrag an.  \nDies ist keine echte Online-Zahlung."
+_RECIPIENT_HELP = "Geben Sie eine beliebige IBAN an.  \nDas ist keine echte Online-Zahlung."
+_REFERENCE_HELP = "Geben Sie eine beliebige Nachricht an.  \nDas ist keine echte Online-Zahlung."
+_VALUE_HELP = "Geben Sie einen beliebigen Betrag an.  \nDas ist keine echte Online-Zahlung."
 
 
 def transaction_view():
     cols = st.columns([2,1])
     cols[0].title("Geld senden", anchor=False)
-    cols[1].write(f'<br><div style="text-align: right; color: #AFAFAF;"> <i> Dies ist keine echte Zahlung. </i></div>', unsafe_allow_html=True)
+    cols[1].write(f'<br><div style="text-align: right; color: {config.COLOR_GREY_TEXT};"> <i> Das ist keine echte Zahlung. </i></div>', unsafe_allow_html=True)
     
     recipient = st.text_input(
         label="Emfpänger",
@@ -34,7 +34,7 @@ def transaction_view():
         help=_RECIPIENT_HELP,
         on_change=track.cb.edit_text,
         kwargs={"key": Key.recipient},
-        placeholder="Email"
+        placeholder="Name oder Email"
     )
 
     value = st.text_input(
@@ -116,7 +116,7 @@ def transaction_success_view():
     st.title("Geld senden", anchor=False)
     st.write("")
     st.success("✅ Ihre simulierte Zahlung wurde bestätigt.")
-    st.write("_Sie können sich nun abmelden. Melden Sie sich **morgen** erneut an und tätigen Sie eine weitere simulierte Zahlung._")
+    st.markdown("<div color>_Sie können sich nun abmelden. Melden Sie sich **morgen** erneut an und tätigen Sie eine weitere simulierte Zahlung._<div>")
     new_payment = st.columns(3)[1].button(
         label="Neue Zahlung",
         key=Key.new_payment,
@@ -135,7 +135,7 @@ def overview():
     st.title("Bilanz", False)
     user_id = st.session_state[SessionStateKey.Common.user_id]
     balance = get_balance(user_id)
-    color = config.COLOR_PRIMARY if balance >= 0 else "#ff4545"
+    color = config.COLOR_PRIMARY if balance >= 0 else config.COLOR_OUTGOING_MONEY
     balance_str = balance_to_str(balance)
 
     st.markdown(f'<div style="color: {color}; font-size: 50px;">{balance_str}</div>', True)
@@ -143,8 +143,10 @@ def overview():
 
     # History:
     df = um.Users.get_transactions(user_id)
-    if not df.empty:
-        st.title("Verlauf", False)
+    st.title("Verlauf", False)
+    if df.empty:
+        st.markdown(f'<br><div style="text-align: center; color: {config.COLOR_GREY_TEXT};"> <i> Keine kürzlichen Aktivitäten </i></div>', True)
+    else:
         for idx, row in df.iterrows():
             log_box(
                 timestamp=idx,
@@ -191,7 +193,7 @@ def log_box(timestamp: dt.datetime, recipient: str, value: float, message: str):
                     border-radius: 10px;
                     padding: 5px;
                     display: grid;
-                    grid-template-columns: 5% 40% 25% 15% 15%;
+                    grid-template-columns: 5% 30% 33% 10% 7% 15%;
                     gap: 0px;
                     margin-bottom: 10px;
                 }}
@@ -212,7 +214,9 @@ def log_box(timestamp: dt.datetime, recipient: str, value: float, message: str):
                 <div style="text-align: left; margin-left: 0px;">
                     <i>{message}</i></div>
                 <div>
-                    <font color="#ababab">{timestamp.strftime(f"%{s}d.%{s}m.%y %{s}H:%M")}</font></div>
+                    <font color="{config.COLOR_GREY_TEXT}">{timestamp.strftime(f"%{s}d.%{s}m.%y")}</font></div>
+                <div>
+                    <font color="{config.COLOR_GREY_TEXT}">{timestamp.strftime(f"%{s}H:%M")}</font></div>
                 <div style="text-align: right; margin-right: 0px; font-size: 19px;">
                     <b><font color="#ffc278">{value}</font></b></div>
             </div>
