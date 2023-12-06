@@ -37,3 +37,7 @@ streamlit run main.py
     - `$ screen -ls` list sessions
     - `$ screen -d ID` or `CTRL + A + D` detach from session
     - `$ screen -r ID` resume to screen
+
+## Management
+### Remove a user:
+`$ python scripts/rm_user.py USER_ID` will remove the user from `user_info.csv` and `transactions/USER_ID.csv`

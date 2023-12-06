@@ -1,4 +1,7 @@
+import toml
 from config_util import (getenv_bool, getenv_int, getenv_switch_str)
+
+ST_CONFIG = toml.load(".streamlit/config.toml")
 
 PRODUCTION = getenv_bool("PRODUCTION", False)
 
@@ -14,12 +17,14 @@ PATH_TO_EMAIL_PW_FILE = "gmail_pw.txt"
 PATH_TO_USAGE_TRACKING_FILE = "volume/usage_tracking.csv"
 PATH_TO_TRANSACTIONS_DIR = "volume/transactions"
 
-COLOR_PRIMARY = "#6bfab1"
-COLOR_SECONDARY = "#FAFAFA"
-COLOR_BACKGROUND = "#0E1117"
-COLOR_SECONDARY_BACKGROUND = "#262730"
+COLOR_PRIMARY = ST_CONFIG["theme"]["primaryColor"]
+COLOR_SECONDARY = ST_CONFIG["theme"]["textColor"]
+COLOR_BACKGROUND = ST_CONFIG["theme"]["backgroundColor"]
+COLOR_SECONDARY_BACKGROUND = ST_CONFIG["theme"]["secondaryBackgroundColor"]
 COLOR_OUTGOING_MONEY = "#ff4545"
 COLOR_GREY_TEXT = "#ABABAB"
+
+LENGHT_OF_STUDY_PHASE_2_IN_DAYS = 6  # DO NOT CHANGE WHEN STUDY STARTED!!!
 
 if PRODUCTION:
     URL_BASE = "https://totp-study.informatik.tu-freiberg.de/"
@@ -98,7 +103,7 @@ CUSTOM_FOOTER =f"""
     </style>
     <div class="footer">
         <p>
-            <a href="/" target="_self">Home</a> &#160 | &#160
+            <a href="/" target="_self">Anmeldung</a> &#160 | &#160
             <a href="/?page=about" target="_blank">Über die Studie</a> &#160 | &#160 
             <a href="/?page=contact" target="_blank">Kontakt</a>
         </p>

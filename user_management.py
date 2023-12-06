@@ -16,13 +16,13 @@ from enum import Enum
 from email.mime.text import MIMEText
 from typing import Literal
 from tweaker import st_tweaker
-import streamlit.components.v1 as components
+from typing import List
 
 import util
 import config
 import usage_tracking as track
 from constants import SessionStateKey
-from state import init_state, set_state, get_state
+from state import init_state, get_state
 
 # TODO:
 # We could use cookies to keep an user logged in at multiple tabs. https://github.com/Mohamed-512/Extra-Streamlit-Components#cookie-manager
@@ -32,13 +32,12 @@ from state import init_state, set_state, get_state
 URL_BASE = config.URL_BASE  # base link of your web app
 PATH_TO_USER_DB_CSV = config.PATH_TO_USER_DB_CSV  # where you store your users authentication information
 SMTP_SERVER = config.SMTP_SERVER  # smtp server of sender email adress
-SENDER_EMAIL = config.SENDER_EMAIL_ADDRESS  # from where registration mails will be sent
 PATH_TO_EMAIL_PW_FILE = config.PATH_TO_EMAIL_PW_FILE  # file containing the password of sender email address, gitignore this file!
 # TIMEOUT of registration link after registration process started. Your users should get at least 10 min to click on the link in their registration email.
 # But you should not keep the timeout value too big. Attackers could block emails by walking through registration processes.
 REGISTRATION_TIMEOUT = dt.timedelta(minutes=30)
 REGISTRATION_TIMEOUT_STRING = "30 Minuten"   # timeout as string for the email
-RESET_PW_TIMEOUT = dt.timedelta(minutes=10)
+RESET_PW_TIMEOUT = dt.timedelta(minutes=1)
 RESET_PW_TIMEOUT_STRING = "10 Minuten"  # timeout as string for the email
 INVALID_USERNAME_SYMBOLS = ["@"]  # keep the "@" in this list!
 FORCE_TOTP_SETUP = True  # if True users have to setup totp once after logging in
@@ -90,9 +89,9 @@ class Users:
         hashed_pw = "hashed_pw"
         secret = "secret"
         reg_uuid = "reg_uuid"
-        reg_timeout_utc = "reg_timeout_utc"
+        reg_timestamp_utc = "reg_timestamp_utc"
         reset_pw_uuid = "reset_pw_uuid"
-        reset_pw_timeout_utc = "reset_pw_timeout_utc"
+        reset_pw_timestamp_utc = "reset_pw_timestamp_utc"
         balance = "balance"
 
     @staticmethod
@@ -154,7 +153,6 @@ class Users:
         df = Users.df()
         df = df.sort_index()
         highest_id = -1 if df.empty else df.index[-1]
-        timeout = (dt.datetime.utcnow() + REGISTRATION_TIMEOUT).replace(microsecond=0)
 
         new_user = {
             Users.Col.id: highest_id + 1,
@@ -164,7 +162,7 @@ class Users:
             Users.Col.hashed_pw: Users.hash_pw(pw, salt),
             Users.Col.secret: secret,
             Users.Col.reg_uuid: reg_uuid,
-            Users.Col.reg_timeout_utc: timeout,
+            Users.Col.reg_timestamp_utc: dt.datetime.utcnow().replace(microsecond=0),
             Users.Col.balance: random.randrange(5000, 15000)
         }
         new_user = pd.DataFrame(data=[new_user])
@@ -196,11 +194,11 @@ class Users:
     @staticmethod
     def set_reset_pw_uuid(user_id: int):
         reset_pw_uuid = str(uuid.uuid4())
-        timeout = (dt.datetime.utcnow() + RESET_PW_TIMEOUT).replace(microsecond=0)
+        timestamp = dt.datetime.utcnow().replace(microsecond=0)
 
         df = Users.df()
         df.at[user_id, Users.Col.reset_pw_uuid] = reset_pw_uuid
-        df.at[user_id, Users.Col.reset_pw_timeout_utc] = timeout
+        df.at[user_id, Users.Col.reset_pw_timestamp_utc] = timestamp
         df.to_csv(Users.csv_path)
 
         return reset_pw_uuid
@@ -263,7 +261,8 @@ class Users:
                             Users.Col.hashed_pw, Users.Col.secret, Users.Col.reg_uuid]
         df[str_type_columns] = df[str_type_columns].astype(str)
         # datetime:
-        df[Users.Col.reg_timeout_utc] = pd.to_datetime(df[Users.Col.reg_timeout_utc])
+        df[Users.Col.reg_timestamp_utc] = pd.to_datetime(df[Users.Col.reg_timestamp_utc])
+        df[Users.Col.reset_pw_timestamp_utc] = pd.to_datetime(df[Users.Col.reset_pw_timestamp_utc])
         df = df.set_index(Users.Col.id)
         return df
     
@@ -325,52 +324,75 @@ class Users:
 
     @staticmethod
     def rm_user(user_id: int):
+        # rm from user database:
         df = Users.df()
         df = df.drop(user_id)
         df.to_csv(Users.csv_path)
 
+        # remove transactions file:
+        path = Users.get_filepath_transaction_csv(user_id)
+        if os.path.exists(path):
+            os.remove(path)
+
     @staticmethod
     def rm_all_users_with_expired_registration_link():
         df = Users.df()
-        df = df.loc[~((df[Users.Col.reg_uuid] != "-") & (df[Users.Col.reg_timeout_utc] <= dt.datetime.utcnow()))]
+        df = df.loc[~((df[Users.Col.reg_uuid] != "-") & (df[Users.Col.reg_timestamp_utc] + REGISTRATION_TIMEOUT <= dt.datetime.utcnow()))]
         df.to_csv(Users.csv_path)
 
     @staticmethod
-    def _send_email_(email: str, subject: str, html: str):
+    def _send_email_(
+        receiver_addr: str,
+        subject: str,
+        html: str,
+        bcc: List[str] = None,
+        sender_name: str = None,
+        path_to_pw_file: str = None):
+        """
+        Send an email to receiver_addr.
+        :receiver_addr: email address of receiver
+        :subject: subject of the mail content
+        :html: content of your mail in html
+        :bcc: when you give a bcc, you should set receiver_addr = config.SENDER_EMAIL_ADDRESS
+        :path_to_pw_file: path to a file, that saves just an app password of the senders email account
+        """
         port = 465  # SSL
-        with open(PATH_TO_EMAIL_PW_FILE) as file:
+        path_to_pw_file = path_to_pw_file if path_to_pw_file else config.PATH_TO_EMAIL_PW_FILE
+        with open(path_to_pw_file) as file:
             password = file.readline()
-        smtp_server = SMTP_SERVER
-        sender_email = SENDER_EMAIL
-        receiver_email = email
+        sender_email = config.SENDER_EMAIL_ADDRESS
+        sender_name = sender_name if sender_name else config.SENDER_EMAIL_NAME
 
         msg = MIMEText(html, 'html')
-        msg['From'] = formataddr((config.SENDER_EMAIL_NAME, sender_email))
-        msg['To'] = receiver_email
+        msg['From'] = formataddr((sender_name, sender_email))
+        msg['To'] = receiver_addr
         msg['Subject'] = subject
 
         ret = {}
         raised_error = None
 
         context = ssl.create_default_context()
-        with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
+        with smtplib.SMTP_SSL(SMTP_SERVER, port, context=context) as server:
             server.login(sender_email, password)
             try:
-                ret = server.sendmail(sender_email, receiver_email, msg.as_string())
+                if not bcc:
+                    ret = server.sendmail(sender_email, receiver_addr, msg.as_string())
+                else:
+                    ret = server.sendmail(sender_email, [receiver_addr] + bcc, msg.as_string())
             except (smtplib.SMTPHeloError, smtplib.SMTPRecipientsRefused, smtplib.SMTPSenderRefused, smtplib.SMTPNotSupportedError) as e:
                 raised_error = e
         return ret, raised_error
 
     @staticmethod
-    def send_registration_email(email: str, reg_uuid: str):
+    def send_registration_email(receiver_addr: str, reg_uuid: str):
         # Design html mails easy with https://tabular.email/demo/blank
         
         reg_url = URL_BASE + "?register=" + reg_uuid
 
-        with open("registration_mail.html") as file:
+        with open("html/registration_mail.html") as file:
             html = file.read()
         
-        username = Users.get_user_by("email", email)[Users.Col.name]
+        username = Users.get_user_by("email", receiver_addr)[Users.Col.name]
 
         html = html.replace("{_webservice_name_}", config.WEBSERVICE_NAME)
         html = html.replace("{_primary_color_}", Users.email_primary_color)
@@ -389,20 +411,20 @@ class Users:
         )
 
         return Users._send_email_(
-            email=email,
+            receiver_addr=receiver_addr,
             subject=f"Registrierung abschließen - {config.WEBSERVICE_NAME}",
             html=html)
 
     @staticmethod
-    def send_reset_pw_email(email: str, reset_pw_uuid: str):
+    def send_reset_pw_email(receiver_addr: str, reset_pw_uuid: str):
         # TODO NEXT UI bauen und dann testen
         # Design html mails easy with https://tabular.email/demo/blank
         reset_pw_url = URL_BASE + "?reset_pw=" + reset_pw_uuid
 
-        with open("reset_pw_mail.html") as file:
+        with open("html/reset_pw_mail.html") as file:
             html = file.read()
 
-        username = Users.get_user_by("email", email)[Users.Col.name]
+        username = Users.get_user_by("email", receiver_addr)[Users.Col.name]
 
         html = html.replace("{_webservice_name_}", config.WEBSERVICE_NAME)
         html = html.replace("{_primary_color_}", Users.email_primary_color)
@@ -423,7 +445,7 @@ class Users:
         # mailto:name@bla.de?subject=Das ist ein Betreff
         subject=f"Passwort zurücksetzen - {config.WEBSERVICE_NAME}"
         return Users._send_email_(
-            email=email,
+            receiver_addr=receiver_addr,
             subject=subject,
             html=html)
 
@@ -437,10 +459,10 @@ class Users:
         """
         if property == "reg_uuid":
             col_uuid = Users.Col.reg_uuid
-            col_timeout = Users.Col.reg_timeout_utc
+            col_timestamp = Users.Col.reg_timestamp_utc
         elif property == "reset_pw_uuid":
             col_uuid = Users.Col.reset_pw_uuid
-            col_timeout = Users.Col.reset_pw_timeout_utc
+            col_timestamp = Users.Col.reset_pw_timestamp_utc
         else:
             raise ValueError(f"Param 'property' = {property} must have the value 'reg_uuid' or 'reset_pw_uuid'.")
               
@@ -448,9 +470,9 @@ class Users:
         if user == {}:
             return True
 
-        if property == "reg_uuid" and dt.datetime.utcnow() > user[col_timeout]:
+        if property == "reg_uuid" and dt.datetime.utcnow() > user[col_timestamp] + REGISTRATION_TIMEOUT:
             return True
-        elif property == "reset_pw_uuid" and dt.datetime.utcnow() > dt.datetime.fromisoformat(user[col_timeout]):
+        elif property == "reset_pw_uuid" and dt.datetime.utcnow() > user[col_timestamp] + RESET_PW_TIMEOUT:
             return True
         
         return False
@@ -623,23 +645,8 @@ def login_view():
         cols[1].write(f'<div style="text-align: right"> <a href="/?page={RESET_PW}" target="_self">Passwort vergessen?</a> </div><br>', unsafe_allow_html=True)
         st.session_state.focus_id = 1
 
-    # this part of the code focuses input on username text input and then on password input
-    components.html(
-        f"""
-        <div>some hidden container</div>
-        <p>{st.session_state.focus_id}</p>
-        <script>
-            var input = window.parent.document.querySelectorAll("input[type=text],input[type=password]");
-            // for (var i = 0; i < input.length; ++i) {{
-            //     input[i].focus();
-            // }}
-            if ({st.session_state.focus_id} >= 0) {{
-                input[{st.session_state.focus_id}].focus();
-            }}
-        </script>
-        """,
-        height=0,
-    )
+    # Jump to the text input that st.session_state.focus_id states:
+    util.set_focus_id()
 
     login = st_tweaker.button(label='Anmelden', type="secondary", use_container_width=True, id="login")
     # Pressing [ENTER] will start a login attempt -> no need to click "login"-button
@@ -701,23 +708,7 @@ def totp_view():
             st.warning("TOTP ungültig")
             track.enter_invalid_totp()
 
-    # this part of the code focuses input on totp input
-    components.html(
-        f"""
-        <div>some hidden container</div>
-        <p>{st.session_state.focus_id}</p>
-        <script>
-            var input = window.parent.document.querySelectorAll("input[type=text],input[type=password]");
-            // for (var i = 0; i < input.length; ++i) {{
-            //     input[i].focus();
-            // }}
-            if ({st.session_state.focus_id} >= 0) {{
-                input[{st.session_state.focus_id}].focus();
-            }}
-        </script>
-        """,
-        height=0,
-    )
+    util.set_focus_id()
 
     exit(0)
 

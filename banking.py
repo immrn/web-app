@@ -1,9 +1,9 @@
 import streamlit as st
-import streamlit.components.v1 as components
 import time
 import datetime as dt
 import platform
 from millify import millify
+import pandas as pd
 
 import util
 import state
@@ -12,18 +12,39 @@ import usage_tracking as track
 import user_management as um
 from constants import SessionStateKey
 
+
 Key = SessionStateKey.Banking
 
 TRANSACTION_SUCCESS = "transaction_success"
 BALANCE_OVERDRAW = 10000
 
-# TODO anpassen falls SimPay ok
 _RECIPIENT_HELP = "Geben Sie eine beliebige IBAN an.  \nDas ist keine echte Online-Zahlung."
 _REFERENCE_HELP = "Geben Sie eine beliebige Nachricht an.  \nDas ist keine echte Online-Zahlung."
 _VALUE_HELP = "Geben Sie einen beliebigen Betrag an.  \nDas ist keine echte Online-Zahlung."
 
 
+def get_balance(user_id):
+    user = um.Users.get_user_by(um.Users.Col.id, user_id)
+    return float(user[um.Users.Col.balance])
+
+
+def balance_to_str(balance):
+    return ("%.2f" % round(balance, 2)).replace(".",",") + " €"
+
+
 def transaction_view():
+    state.init_state("focus_id", 0)
+
+    def text_input_changed(key: str):
+        track.cb.edit_text(key)
+        match key:
+            case Key.recipient:
+                st.session_state.focus_id = 1
+            case Key.value:
+                st.session_state.focus_id = 2
+            case Key.message:
+                pass
+
     cols = st.columns([2,1])
     cols[0].title("Geld senden", anchor=False)
     cols[1].write(f'<br><div style="text-align: right; color: {config.COLOR_GREY_TEXT};"> <i> Das ist keine echte Zahlung. </i></div>', unsafe_allow_html=True)
@@ -31,17 +52,17 @@ def transaction_view():
     recipient = st.text_input(
         label="Emfpänger",
         key=Key.recipient,
-        help=_RECIPIENT_HELP,
-        on_change=track.cb.edit_text,
+        on_change=text_input_changed,
         kwargs={"key": Key.recipient},
-        placeholder="Name oder Email"
+        placeholder="Name oder Email",
+        help=_RECIPIENT_HELP
     )
 
     value = st.text_input(
         label="Betrag in €",
         key=Key.value,
         placeholder="0,00",
-        on_change=track.cb.edit_text,
+        on_change=text_input_changed,
         kwargs={"key": Key.value},
         help=_VALUE_HELP,
     )
@@ -50,15 +71,17 @@ def transaction_view():
 
     message = st.text_input(
         label="Nachricht",
-        key=Key.message, 
-        help=_REFERENCE_HELP,
-        on_change=track.cb.edit_text,
+        key=Key.message,
+        on_change=text_input_changed,
         kwargs={"key": Key.message},
-        placeholder="Schreibe eine Nachricht"
+        placeholder="Schreibe eine Nachricht",
+        help=_REFERENCE_HELP
     )
     
-    col = st.columns([1,2,1])
+    # Jump from one text input to the next one:
+    util.set_focus_id()
 
+    col = st.columns([1,2,1])
     confirm = col[1].button(
         label="Senden",
         key=Key.confirm,
@@ -108,6 +131,7 @@ def transaction_view():
                 del st.session_state["did_rerun_after_transaction"]
                 time.sleep(2)
         
+        st.session_state.focus_id = 0
         st.session_state[Key.state] = TRANSACTION_SUCCESS
         st.rerun()
 
@@ -116,7 +140,8 @@ def transaction_success_view():
     st.title("Geld senden", anchor=False)
     st.write("")
     st.success("✅ Ihre simulierte Zahlung wurde bestätigt.")
-    st.markdown("<div color>_Sie können sich nun abmelden. Melden Sie sich **morgen** erneut an und tätigen Sie eine weitere simulierte Zahlung._<div>")
+    st.write("")
+
     new_payment = st.columns(3)[1].button(
         label="Neue Zahlung",
         key=Key.new_payment,
@@ -124,10 +149,25 @@ def transaction_success_view():
     )
     if new_payment:
         st.session_state[Key.state] = None
-        # for key in [Key.message, Key.value, Key.recipient]:
-        #     del st.session_state[state._STATE + key]
-        #     del st.session_state[state._SHADOW + key]
         st.rerun()
+
+    # Show users progress in user study:
+    today_date = pd.Timestamp.utcnow().date()
+    user = um.Users.get_user_by("id", st.session_state[SessionStateKey.Common.user_id])
+    registration_date = user[um.Users.Col.reg_timestamp_utc].date()
+
+    days_remaining = registration_date + dt.timedelta(days=config.LENGHT_OF_STUDY_PHASE_2_IN_DAYS) - today_date
+    days_remaining = days_remaining.days
+    if days_remaining <= 0:
+        # user finished
+        progress_text = f"Sie haben die 2. Phase der Studie abgeschlossen. Bitte nehmen Sie Ihren Abschlusstermin war."
+    else:
+        progress_text = f"Bitte melden Sie sich morgen wieder an."
+
+    with open("html/info_box_from_user_study.html") as file:
+        html = file.read()
+        html = html.replace("{progress_text}", progress_text)
+    st.markdown(html, True)
 
 
 def overview():
@@ -148,7 +188,7 @@ def overview():
         st.markdown(f'<br><div style="text-align: center; color: {config.COLOR_GREY_TEXT};"> <i> Keine kürzlichen Aktivitäten </i></div>', True)
     else:
         for idx, row in df.iterrows():
-            log_box(
+            transaction_log_box(
                 timestamp=idx,
                 recipient=row["recipient"],
                 value=row["value"],
@@ -156,16 +196,7 @@ def overview():
             )
 
 
-def get_balance(user_id):
-    user = um.Users.get_user_by(um.Users.Col.id, user_id)
-    return float(user[um.Users.Col.balance])
-
-
-def balance_to_str(balance):
-    return ("%.2f" % round(balance, 2)).replace(".",",") + " €"
-
-
-def log_box(timestamp: dt.datetime, recipient: str, value: float, message: str):
+def transaction_log_box(timestamp: dt.datetime, recipient: str, value: float, message: str):
         msg_len = 35
         message = message if len(message) < msg_len else message[0:msg_len] + "..."
         if message == "nan":
@@ -186,42 +217,17 @@ def log_box(timestamp: dt.datetime, recipient: str, value: float, message: str):
             case _:
                 s = ""
 
-        st.markdown(f"""
-            <style>
-                .grid-container {{
-                    border: 2px solid #4A4A4A;
-                    border-radius: 10px;
-                    padding: 5px;
-                    display: grid;
-                    grid-template-columns: 5% 30% 33% 10% 7% 15%;
-                    gap: 0px;
-                    margin-bottom: 10px;
-                }}
-                .grid-container > div {{
-                    margin: auto;
-                    padding: 5px;
-                    border: 0px solid #1F1F1F;
-                    word-wrap: break-word;
-                    word-break: break-word;
-                }}
-            </style>
-            <body>
-            <div class="grid-container">
-                <div>
-                    an</div>
-                <div style="margin-left: 5px;">
-                    <b><font color="{config.COLOR_PRIMARY}">{recipient}</font></b></div>
-                <div style="text-align: left; margin-left: 0px;">
-                    <i>{message}</i></div>
-                <div>
-                    <font color="{config.COLOR_GREY_TEXT}">{timestamp.strftime(f"%{s}d.%{s}m.%y")}</font></div>
-                <div>
-                    <font color="{config.COLOR_GREY_TEXT}">{timestamp.strftime(f"%{s}H:%M")}</font></div>
-                <div style="text-align: right; margin-right: 0px; font-size: 19px;">
-                    <b><font color="#ffc278">{value}</font></b></div>
-            </div>
-            </body>
-            """, True)
+        with open("html/transaction_log_box.html") as file:
+            html = file.read()
+        
+        html = html.replace("{primary_color}", config.COLOR_PRIMARY)
+        html = html.replace("{recipient}", recipient)
+        html = html.replace("{message}", message)
+        html = html.replace("{grey_color}", config.COLOR_GREY_TEXT)
+        html = html.replace("{date}", timestamp.strftime(f"%{s}d.%{s}m.%y"))
+        html = html.replace("{time}", timestamp.strftime(f"%{s}H:%M"))
+        html = html.replace("{value}", value)
+        st.markdown(html, True)
 
 
 def logout_button():
