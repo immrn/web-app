@@ -25,7 +25,9 @@ track.init(st_key_for_username=Key.user_id)
 um.checkFiles()
 st.markdown(config.STREAMLIT_STYLE, unsafe_allow_html=True)
 
-if Key.state not in st.session_state and len(query_params.keys()) == 0 \
+if called_download_page:
+    pass
+elif Key.state not in st.session_state and len(query_params.keys()) == 0 \
     or Key.state in st.session_state and st.session_state[Key.state] == um.TOTP:
     um.login_header()
 else:
