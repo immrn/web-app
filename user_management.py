@@ -275,6 +275,10 @@ class Users:
     @staticmethod
     def df_transaction(user_id) -> pd.DataFrame:
         filepath = Users.get_filepath_transaction_csv(user_id)
+
+        if not os.path.exists(filepath):
+            return pd.DataFrame()
+
         df = pd.read_csv(filepath, sep=",")
         df["utc_timestamp"] = pd.to_datetime(df["utc_timestamp"])
         df["recipient"] = df["recipient"].astype(str)
