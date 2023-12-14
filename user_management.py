@@ -37,7 +37,7 @@ PATH_TO_EMAIL_PW_FILE = config.PATH_TO_EMAIL_PW_FILE  # file containing the pass
 # But you should not keep the timeout value too big. Attackers could block emails by walking through registration processes.
 REGISTRATION_TIMEOUT = dt.timedelta(minutes=30)
 REGISTRATION_TIMEOUT_STRING = "30 Minuten"   # timeout as string for the email
-RESET_PW_TIMEOUT = dt.timedelta(minutes=1)
+RESET_PW_TIMEOUT = dt.timedelta(minutes=10)
 RESET_PW_TIMEOUT_STRING = "10 Minuten"  # timeout as string for the email
 INVALID_USERNAME_SYMBOLS = ["@"]  # keep the "@" in this list!
 FORCE_TOTP_SETUP = True  # if True users have to setup totp once after logging in
@@ -986,11 +986,12 @@ def finish_registration_view(reg_uuid: str):
         st.title("Registrierung abgeschlossen", anchor=False)
         pad_after_title()
         st.write("Du hast dich erfolgreich registriert.")
-        st.write(f'<a href="/" target="_self">Zur Anmeldung</a>', unsafe_allow_html=True)
 
         user = Users.get_user_by(property="reg_uuid", value=reg_uuid)
         df = Users.df()
         df.at[user[Users.Col.id], Users.Col.reg_uuid] = "-"
         df.to_csv(Users.csv_path)
+
+    st.write(f'<a href="/" target="_self">Zur Anmeldung</a>', unsafe_allow_html=True)
     st.markdown(config.CUSTOM_FOOTER, unsafe_allow_html=True)
     exit(0)
