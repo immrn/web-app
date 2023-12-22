@@ -55,6 +55,8 @@ if not get_state(Key.state):
                 mist_views.download()
             case "download_only_service":
                 mist_views.download_only_service()
+            case "download_prototype":
+                mist_views.download_prototype()
             case _:
                 mist_views.not_found_404()
     elif "register" in query_params.keys():
