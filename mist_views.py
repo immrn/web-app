@@ -2,6 +2,10 @@ import streamlit as st
 from streamlit_javascript import st_javascript
 import config
 
+
+DOWNLOAD_PATH = config.PATH_TO_DOWNLOAD + ("" if config.PATH_TO_DOWNLOAD.endswith("/") else "/")
+
+
 def not_found_404():
     st.title("404: Page not found", anchor=False)
     # TODO Link to Homepage
@@ -49,7 +53,7 @@ def _not_windows_message():
 
 
 def _download_button_blue_totp_service():
-    with open("volume/download/service.exe", "rb") as file:
+    with open(DOWNLOAD_PATH + "service.exe", "rb") as file:
         st.download_button(
             label="Blue TOTP Service herunterladen",
             file_name="Blue TOTP Service Setup.exe",
@@ -147,7 +151,7 @@ def download_prototype():
     st.markdown("1. Laden Sie folgende .apk Datei **MIT IHREM SMARTPHONE** herunter, oder kopieren Sie die Datei nach dem Download auf Ihr Smartphone:")
     cols = st.columns([1,35])
     with cols[1]:
-        with open("volume/download/app.apk", "rb") as file:
+        with open(DOWNLOAD_PATH + "app.apk", "rb") as file:
             st.download_button(
                 label="Blue TOTP App herunterladen",
                 file_name="Blue TOTP App.apk",
@@ -180,7 +184,7 @@ def download_prototype():
     st.markdown("1. Laden Sie die Blue TOTP Extension herunter.")
     cols = st.columns([1,35])
     with cols[1]:
-        with open("volume/download/ext.zip", "rb") as file:
+        with open(DOWNLOAD_PATH + "ext.zip", "rb") as file:
             st.download_button(
                 label="Blue TOTP Chrome Extension herunterladen",
                 file_name="Blue TOTP Chrome Extension.zip",

@@ -16,6 +16,7 @@ PATH_TO_USER_DB_CSV = "volume/user_info.csv"
 PATH_TO_EMAIL_PW_FILE = "gmail_pw.txt"
 PATH_TO_USAGE_TRACKING_FILE = "volume/usage_tracking.csv"
 PATH_TO_TRANSACTIONS_DIR = "volume/transactions"
+PATH_TO_DOWNLOAD = "volume/download"
 
 COLOR_PRIMARY = ST_CONFIG["theme"]["primaryColor"]
 COLOR_SECONDARY = ST_CONFIG["theme"]["textColor"]
@@ -32,6 +33,7 @@ if PRODUCTION:
     PATH_TO_EMAIL_PW_FILE = "/share/volume/gmail_pw.txt"
     PATH_TO_USAGE_TRACKING_FILE = "/share/volume/usage_tracking.csv"
     PATH_TO_TRANSACTIONS_DIR = "/share/volume/transactions"
+    PATH_TO_DOWNLOAD = "/share/volume/download"
 
 # -------------------- Streamlit stuff -------------------- #
 

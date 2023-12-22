@@ -36,6 +36,8 @@ streamlit run main.py
 - `$ . ./venv/bin/activate`
 - `$ streamlit run main.py --server.port=443 --server.address=0.0.0.0`
 
+- copy files: `scp -P 2222 volume/download/app.apk root@docker2.xsitepool.tu-freiberg.de:/share/volume/download`
+
 - 443 und 80 werden aktuell via 6001 und 6002 nach außen geroutet
 - `/share` is persistent
 
