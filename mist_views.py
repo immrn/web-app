@@ -93,7 +93,19 @@ def download():
         """
     )
 
-    # st.subheader("Installation (Android)")
+    st.subheader("Installation (Android)")
+    st.markdown("""
+        1. Laden Sie die Blue TOTP App mit Ihrem Smartphone herunter.
+        2. Finden Sie die heruntergeladene Datei im Filemanager Ihres Smartphones.
+        3. Tippen Sie auf die Datei und erlauben Sie das Installieren aus fremden Quellen.
+    """)
+    with open(DOWNLOAD_PATH + "app.apk", "rb") as file:
+        st.download_button(
+            label="Blue TOTP App herunterladen",
+            file_name="Blue TOTP App.apk",
+            data=file,
+            mime="application/octet-stream"
+        )
     # st.markdown(
     #     f"""
     #     Suchen Sie im **Play Store** nach <q>_Blue TOTP_</q> oder scannen Sie den folgenden QR-Code mit Ihrem Android-Smartphone:  

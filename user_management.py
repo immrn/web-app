@@ -617,7 +617,7 @@ def login_view():
 
     # autocomplete: https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/autocomplete
     username_or_email = st_tweaker.text_input(
-        label="Benutzername oder Email",
+        label="Benutzername",
         id="username",
         on_change=username_or_email_changed,
         autocomplete="username")
@@ -760,7 +760,7 @@ def setup_totp_view():
     # Step 2: check totp
     cols = st.columns(col_spec)    
     cols[0].header("2. Prüfen", False)
-    cols[0].write("Geben Sie das TOTP an, welches die App generiert hat.")
+    cols[0].write("Geben Sie die sechsstellige Zahl an, die von der App generiert wird.")
 
     cols[1].write("")
     cols[1].write("")
