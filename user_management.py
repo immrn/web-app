@@ -740,7 +740,7 @@ def setup_totp_view():
 
     # Step 1: scan qr code
     cols[0].header("1. QR-Code scannen", False)
-    cols[0].write("Scannen Sie folgenden Code mit Ihrem Smartphone. Dafür benötigen Sie eine One-time Password (OTP) App.")
+    cols[0].write("Scannen Sie folgenden Code mit Ihrem Smartphone. Dafür benötigen Sie eine One-time Password (OTP) App (z.B. Blue TOTP).")
     # TODO eigene TOTP App hier verlinken, wenn im Android store?
 
     qr = qrcode.QRCode(
@@ -965,7 +965,7 @@ def registration_mail_sent_view():
     pad_after_title()
     user_id = get_state(Key.user_id)
     email = Users.get_user_by("id", user_id)[Users.Col.email]
-    st.subheader(f"Dir wurde eine Email an {email} gesendet, um die Registierung abzuschließen. Schau auch im Spam-Ordner nach.", anchor=False)
+    st.subheader(f"Dir wurde eine Email an `{email}` gesendet, um die Registierung abzuschließen. Schau auch im Spam-Ordner nach.", anchor=False)
     st.markdown(config.CUSTOM_FOOTER, unsafe_allow_html=True)
     exit(0)
 

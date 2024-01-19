@@ -114,70 +114,22 @@ def download():
     # unsafe_allow_html=True)
     exit(0)
 
-def download_only_service():
-    is_windows = True if st_javascript("""navigator.appVersion.indexOf('Win');""") != -1 else False
 
-    st.title("Blue TOTP Service", anchor=False)
-
-    if not is_windows:
-        _not_windows_message()
-
-    st.markdown(f"""
-        1. Laden Sie das Programm **_Blue TOTP Service_** auf Ihren Windows-PC herunter.
-        """
-    )
-    cols = st.columns([1,35])
-    with cols[1]:
-        _download_button_blue_totp_service()
-    st.markdown(f"""
-        2. Installieren Sie es.
-        3. Öffnen Sie wieder die Blue TOTP Extension in Ihrem Chrome Browser.
-        """
-    )
-
-    exit(0)
-
-
-def download_prototype():
+def download_pc_prototype():
     is_windows = True if st_javascript("""navigator.appVersion.indexOf('Win');""") != -1 else False
     link_chrome_download = "https://www.google.com/chrome/"
 
-    st.title("Blue TOTP installieren PROTOTYPE", anchor=False)
+    st.title("Blue TOTP installieren", anchor=False)
 
-    st.info("Diese Seite dient nur für die Installation der Prototypen. Es ist noch nicht der Stand, der in der Studie verwendet wird. " +
-            "Die offizielle Download Page findet man hier: [https://totp-study.informatik.tu-freiberg.de/?page=download](https://totp-study.informatik.tu-freiberg.de/?page=download)")
-
-    st.markdown("Diese Anleitung hilft Ihnen, Blue TOTP auf Ihrem Windows PC und auf Ihrem Android Smartphone zu installieren.")
+    st.markdown("Diese Anleitung hilft Ihnen, Blue TOTP auf Ihrem Windows PC zu installieren.")
     st.subheader("Voraussetzungen")
     if not is_windows:
         _not_windows_message()
     st.markdown(
         f"""
         - bluetoothfähiger Windows PC + [Chrome Browser]({link_chrome_download})
-        - Android Smartphone
         """    
     )
-    st.markdown("---")
-
-    st.subheader("Installation (Android)")
-    st.markdown("1. Laden Sie folgende .apk Datei **MIT IHREM SMARTPHONE** herunter, oder kopieren Sie die Datei nach dem Download auf Ihr Smartphone:")
-    cols = st.columns([1,35])
-    with cols[1]:
-        with open(DOWNLOAD_PATH + "app.apk", "rb") as file:
-            st.download_button(
-                label="Blue TOTP App herunterladen",
-                file_name="Blue TOTP App.apk",
-                data=file,
-                mime="application/octet-stream"
-            )
-    st.markdown("Auf Ihrem Smartphone:")
-    st.markdown(f"""
-        2. Öffnen Sie einen File Manager.
-        3. Navigieren Sie zu dem Ort an dem Sie die .apk-Datei gespeichert haben.
-        4. Tippen Sie auf die .apk-Datei und öffnen Sie anschließend die App. Ggf. müssen Sie dem File Manager die Erlaubnis geben, die APK zu installieren.
-        5. Ignorieren Sie das Onboarding in der App. Die weiteren Schritte auf dieser Website, erklären Ihnen was zu tun ist.
-        6. Geben Sie der App alle Berechtigungen, die Sie erfragt. Andernfalls müssen Sie die Berechtigungen händisch der App zuweisen oder die App erneut installieren. 
-    """)
     st.markdown("---")
 
     st.subheader("Installation Blue TOTP Service")
@@ -205,11 +157,33 @@ def download_prototype():
             )
 
     st.markdown(f"""
-        2. Entpacken Sie `totp-ext.zip`.
-        3. Öffnen Sie Ihren Chrome Browser und besuchen sie folgende URL: `chrome://extensions`
+        2. Entpacken Sie `Blue TOTP Chrome Extension.zip`.
+        3. Öffnen Sie Ihren Chrome Browser und besuchen sie folgende URL: [chrome://extensions](chrome://extensions)
         4. Aktivieren Sie rechts oben den **Entwicklermodus**. 
-        5. Klicken Sie auf **Entpackte Erweiterung laden** und wählen Sie `totp-ext`. Evtl. müssen Sie für den folgenden Schritt nun den Chrome Browser neu starten.
+        5. Klicken Sie auf **Entpackte Erweiterung laden** und wählen Sie im Ordner `Blue TOTP Chrome Extension` den Ordner `totp-ext` aus.
         6. Drücken Sie den **Erweiterungen**-Button in Chrome (Puzzle-Symbol in der rechten oberen Ecke) und pinnen sie Blue TOTP an.
     """)
 
+    exit(0)
+
+def download_app_prototype():
+    st.title("Blue TOTP installieren", anchor=False)
+    st.subheader("Installation (Android)")
+    st.markdown("1. Laden Sie folgende .apk Datei **mit Ihrem Smartphone** herunter:")
+    cols = st.columns([1,35])
+    with cols[1]:
+        with open(DOWNLOAD_PATH + "app.apk", "rb") as file:
+            st.download_button(
+                label="Blue TOTP App herunterladen",
+                file_name="Blue TOTP App.apk",
+                data=file,
+                mime="application/octet-stream"
+            )
+    st.markdown(f"""
+        2. Öffnen Sie einen File Manager.
+        3. Navigieren Sie zu dem Ort an dem Sie die .apk-Datei gespeichert haben (Download).
+        4. Tippen Sie auf die .apk-Datei und öffnen Sie anschließend die App. Ggf. müssen Sie dem File Manager die Erlaubnis geben, die APK zu installieren.
+        5. Ignorieren Sie das Onboarding in der App.
+        6. Geben Sie der App alle Berechtigungen, die Sie erfragt. Andernfalls müssen Sie die Berechtigungen händisch der App zuweisen oder die App erneut installieren. 
+    """)
     exit(0)
