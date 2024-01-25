@@ -145,14 +145,18 @@ def init(st_key_for_username: str):
     _key_for_username_ = st_key_for_username
 
 
-def _track_(action: str, key: str = None, remark: str = None):
-    if _key_for_username_ not in st.session_state:
-        raise NotImplementedError('You must declare st.session_state["user"]')
-    if key and key not in st.session_state:
-        raise NotImplementedError(f'You must declare st.session_state["{key}"]')
+def _track_(action: str, key: str = None, remark: str = None, user_needed: bool = True):
+    if user_needed:
+        if _key_for_username_ not in st.session_state:
+            raise NotImplementedError('You must declare st.session_state["user"]')
+        if key and key not in st.session_state:
+            raise NotImplementedError(f'You must declare st.session_state["{key}"]')
 
-    user = st.session_state[_key_for_username_]
-    value = st.session_state[key] if key else ""
+        user = st.session_state[_key_for_username_]
+        value = st.session_state[key] if key else ""
+    else:
+        user = "-"
+        value = ""
 
     # we don't want to save "None", we want to save an empty string:
     remark = "" if not remark else remark

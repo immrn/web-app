@@ -604,6 +604,7 @@ def login_header():
 def login_view():
     # TODO block IP address after n failed login attempts for m hours.
 
+    track._track_(action="loaded_login", user_needed=False)
     init_state("focus_id", 0)
 
     ret_check_login = get_state(Key.ret_check_login)
