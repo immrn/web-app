@@ -158,9 +158,9 @@ def download_pc_prototype():
 
     st.markdown(f"""
         2. Entpacken Sie `Blue TOTP Chrome Extension.zip`.
-        3. Öffnen Sie Ihren Chrome Browser und besuchen sie folgende URL: [chrome://extensions](chrome://extensions)
+        3. Öffnen Sie Ihren Chrome Browser und kopieren Sie folgende URL in die Adresszeile: `chrome://extensions`
         4. Aktivieren Sie rechts oben den **Entwicklermodus**. 
-        5. Klicken Sie auf **Entpackte Erweiterung laden** und wählen Sie im Ordner `Blue TOTP Chrome Extension` den Ordner `totp-ext` aus.
+        5. Klicken Sie auf **Entpackte Erweiterung laden** und wählen Sie den Ordner `Blue TOTP Chrome Extension`.
         6. Drücken Sie den **Erweiterungen**-Button in Chrome (Puzzle-Symbol in der rechten oberen Ecke) und pinnen sie Blue TOTP an.
     """)
 
