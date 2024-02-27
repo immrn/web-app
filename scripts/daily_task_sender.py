@@ -17,7 +17,7 @@ for user_id in user_ids:
     user = Users.get_user_by("id", user_id)
     registration_date = user[Users.Col.reg_timestamp_utc].date()
 
-    if registration_date + dt.timedelta(days=config.LENGHT_OF_STUDY_PHASE_2_IN_DAYS) > today_date:
+    if registration_date + dt.timedelta(days=config.LENGHT_OF_STUDY_PHASE_2_IN_DAYS) >= today_date:
         # user is still doing 2. phase of the study
         bcc += [user[Users.Col.email]]
 
